@@ -17,6 +17,27 @@ const IoReactNativeIntegrity = NativeModules.IoReactNativeIntegrity
       }
     );
 
-export function multiply(a: number, b: number): Promise<number> {
-  return IoReactNativeIntegrity.multiply(a, b);
+export function isAttestationServiceAvailable(): Promise<boolean> {
+  return IoReactNativeIntegrity.isAttestationServiceAvailable();
+}
+
+export function generateHardwareKey(): Promise<string> {
+  return IoReactNativeIntegrity.generateHardwareKey();
+}
+
+export function getAttestation(
+  challenge: string,
+  hardwareKeyTag: string
+): Promise<string> {
+  return IoReactNativeIntegrity.getAttestation(challenge, hardwareKeyTag);
+}
+
+export function generateHardwareSignatureWithAssertion(
+  clientData: string,
+  hardwareKeyTag: string
+): Promise<string> {
+  return IoReactNativeIntegrity.generateHardwareSignatureWithAssertion(
+    clientData,
+    hardwareKeyTag
+  );
 }
