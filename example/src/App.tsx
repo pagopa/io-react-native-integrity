@@ -83,6 +83,10 @@ export default function App() {
       jwk: jwk,
     };
 
+    // Between Android and iOS there is a difference for the generation of hardwareSignature
+    // and assertion as on iOS both are generated directly from the SDK via generateAssertion
+    // while on Android the hardwareSignature must be generated via the signature functions and
+    // the assertion must be retrieved from the backend via an integrityToken.
     if (hardwareKeyTag) {
       const clientDataHash = await sha256(JSON.stringify(clientData));
 
