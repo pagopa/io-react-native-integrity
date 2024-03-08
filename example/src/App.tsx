@@ -119,7 +119,7 @@ export default function App() {
             loading={decodedAttestation === undefined}
           />
           <ButtonWithLoader
-            title="Generate Hardware Signature"
+            title="Generate HS and Assertion"
             onPress={() => getHardwareSignatureWithAssertion()}
             loading={decodedAttestation === undefined}
           />
