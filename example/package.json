@@ -13,6 +13,7 @@
     "buffer": "^6.0.3",
     "react": "18.2.0",
     "react-native": "0.73.5",
+    "react-native-dotenv": "^3.4.11",
     "react-native-sha256": "^1.4.10"
   },
   "devDependencies": {
