@@ -26,7 +26,8 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace @pagopa/io-react-native-integrity-example",
+    "example": "yarn workspace @pagopa/io-react-native-integrity-example start",
+    "backend": "yarn workspace @pagopa/io-react-native-integrity-backend start",
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -81,7 +82,8 @@
     "react-native": "*"
   },
   "workspaces": [
-    "example"
+    "example",
+    "backend"
   ],
   "packageManager": "yarn@3.6.1",
   "jest": {
