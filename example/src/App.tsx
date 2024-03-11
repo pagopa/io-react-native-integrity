@@ -163,12 +163,12 @@ export default function App() {
           <ButtonWithLoader
             title="VerifyAttestation"
             onPress={() => verifyAttestation()}
-            loading={attestation === undefined}
+            loading={false}
           />
           <ButtonWithLoader
             title="VerifyAssertion"
             onPress={() => verifyAssertion()}
-            loading={assertion === undefined}
+            loading={false}
           />
         </>
       ) : null}
