@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Buffer } from 'buffer';
 import { StyleSheet, SafeAreaView, Text, ScrollView } from 'react-native';
 import {
   generateHardwareKey,
@@ -28,7 +27,7 @@ export default function App() {
   >('');
   const [attestation, setAttestation] = React.useState<string | undefined>('');
   const [assertion, setAssertion] = React.useState<string | undefined>('');
-  const [decodedAttestation, setDecodedAttestation] = React.useState<
+  const [hsWithAssertion, setHsWithAssertion] = React.useState<
     string | undefined
   >('');
   const [isServiceAvailable, setIsServiceAvailable] =
@@ -79,18 +78,6 @@ export default function App() {
       const result = await getAttestation(nonce, hardwareKeyTag);
       setAttestation(result);
       setDebugLog(result);
-    }
-  };
-
-  const decodeAttestation = () => {
-    // decode attestation from base64 to string
-    setDecodedAttestation(undefined);
-    if (attestation) {
-      const attestationDecoded = Buffer.from(attestation, 'base64').toString(
-        'hex'
-      );
-      setDecodedAttestation(attestationDecoded);
-      setDebugLog(attestationDecoded);
     }
   };
 
@@ -147,6 +134,7 @@ export default function App() {
         JSON.stringify(clientData),
         hardwareKeyTag
       );
+      setHsWithAssertion(result);
       setDebugLog(result);
       setAssertion(result);
     }
@@ -168,24 +156,19 @@ export default function App() {
             loading={attestation === undefined}
           />
           <ButtonWithLoader
-            title="Decode Attestation"
-            onPress={() => decodeAttestation()}
-            loading={decodedAttestation === undefined}
-          />
-          <ButtonWithLoader
             title="Generate HS and Assertion"
             onPress={() => getHardwareSignatureWithAssertion()}
-            loading={decodedAttestation === undefined}
+            loading={hsWithAssertion === undefined}
           />
           <ButtonWithLoader
             title="VerifyAttestation"
             onPress={() => verifyAttestation()}
-            loading={decodedAttestation === undefined}
+            loading={attestation === undefined}
           />
           <ButtonWithLoader
             title="VerifyAssertion"
             onPress={() => verifyAssertion()}
-            loading={decodedAttestation === undefined}
+            loading={assertion === undefined}
           />
         </>
       ) : null}
