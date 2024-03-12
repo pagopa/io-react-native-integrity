@@ -37,7 +37,7 @@ $ yarn install
 
 # Install podfiles when targeting iOS (ignore this step for Android)
 # Run this only during the first setup and when Pods dependencies change
-$ cd iOS && bundle exec pod install && cd ..
+$ cd ios && bundle exec pod install && cd ..
 ```
 
 ## Run the app
