@@ -44,8 +44,8 @@ $ cd iOS && bundle exec pod install && cd ..
 
 ```bash
 # Android
-$ yarn react-native run-android
+$ yarn android
 
 # iOS
-$ yarn react-native run-ios
+$ yarn ios
 ```
