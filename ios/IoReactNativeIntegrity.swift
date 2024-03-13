@@ -4,14 +4,7 @@ import CryptoKit
 /// A class to interact with the DeviceCheck and CryptoKit frameworks to ensure the integrity of the device and app.
 @objc(IoReactNativeIntegrity)
 class IoReactNativeIntegrity: NSObject {
-  
-  /// Private function to rejects a promise with a specified error.
-  /// - Parameters:
-  ///   - reject: The promise reject block to call when rejecting a promise.
-  ///   - error: The error to use for rejection, providing an error code and message.
-  private func rejectPromise(_ reject: @escaping RCTPromiseRejectBlock, withError error: IntegrityError) {
-    reject(error.code, error.message, nil)
-  }
+  private typealias ME = ModuleException
   
   /// Determines if the DeviceCheck App Attestation Service is available on the device.
   /// - Parameters:
@@ -20,14 +13,14 @@ class IoReactNativeIntegrity: NSObject {
   @objc(isAttestationServiceAvailable:withRejecter:)
   func isAttestationServiceAvailable(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
     guard #available(iOS 14.0, *) else {
-      self.rejectPromise(reject, withError: .unsupportedIOSVersion)
+      ME.unsupportedService.reject(reject: reject)
       return
     }
     
     if DCAppAttestService.shared.isSupported {
       resolve(true)
     } else {
-      self.rejectPromise(reject, withError: .unsupportedService)
+      ME.unsupportedService.reject(reject: reject)
     }
   }
   
@@ -39,7 +32,7 @@ class IoReactNativeIntegrity: NSObject {
   func generateHardwareKey(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
     
     guard #available(iOS 14.0, *) else {
-      self.rejectPromise(reject, withError: .unsupportedIOSVersion)
+      ME.unsupportedIOSVersion.reject(reject: reject)
       return
     }
     
@@ -49,7 +42,7 @@ class IoReactNativeIntegrity: NSObject {
       service.generateKey { hardwareKeyTag, error in
           
         guard error == nil else {
-          self.rejectPromise(reject, withError: .generationKeyFailed)
+          ME.generationKeyFailed.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
           return
         }
           
@@ -57,7 +50,7 @@ class IoReactNativeIntegrity: NSObject {
           
       }
     } else {
-      self.rejectPromise(reject, withError: .unsupportedService)
+      ME.unsupportedService.reject(reject: reject);
     }
   }
   
@@ -71,7 +64,7 @@ class IoReactNativeIntegrity: NSObject {
   func getAttestation(challenge: String, hardwareKeyTag: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
     
     guard #available(iOS 14.0, *) else {
-      self.rejectPromise(reject, withError: .unsupportedIOSVersion)
+      ME.unsupportedIOSVersion.reject(reject: reject);
       return
     }
     
@@ -80,8 +73,8 @@ class IoReactNativeIntegrity: NSObject {
       
       // Safely encode the challenge string to data and generate a hash.
       guard let challengeData = challenge.data(using: .utf8) else {
-          self.rejectPromise(reject, withError: .challengeError)
-          return
+        ME.challengeError.reject(reject: reject)
+        return
       }
       let hash = Data(SHA256.hash(data: challengeData))
       
@@ -89,7 +82,7 @@ class IoReactNativeIntegrity: NSObject {
       service.attestKey(hardwareKeyTag, clientDataHash: hash) {attestation, error in
             
         guard error == nil else {
-          self.rejectPromise(reject, withError: .attestationError)
+          ME.attestationError.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
           return
         }
         
@@ -98,7 +91,7 @@ class IoReactNativeIntegrity: NSObject {
         }
         
     } else {
-      self.rejectPromise(reject, withError: .unsupportedService)
+      ME.unsupportedService.reject(reject: reject)
     }
   }
   
@@ -112,7 +105,7 @@ class IoReactNativeIntegrity: NSObject {
   func generateHardwareSignatureWithAssertion(clientData: String, hardwareKeyTag: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) -> Void {
     
     guard #available(iOS 14.0, *) else {
-      self.rejectPromise(reject, withError: .unsupportedIOSVersion)
+      ME.unsupportedIOSVersion.reject(reject: reject)
       return
     }
     
@@ -121,7 +114,7 @@ class IoReactNativeIntegrity: NSObject {
       
       // Safely encode the clientData string to data and generate a hash.
       guard let encodedClientData = clientData.data(using: .utf8) else {
-        self.rejectPromise(reject, withError: .clientDataEncoding)
+        ME.clientDataEncodingError.reject(reject: reject)
         return
       }
       
@@ -130,7 +123,7 @@ class IoReactNativeIntegrity: NSObject {
       service.generateAssertion(hardwareKeyTag, clientDataHash: clientDataHash) { assertion, error in
         
         guard error == nil else {
-          self.rejectPromise(reject, withError: .generationAssertionFailed)
+          ME.generationAssertionFailed.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
           return
         }
         
@@ -139,8 +132,56 @@ class IoReactNativeIntegrity: NSObject {
         
       }
     } else {
-      self.rejectPromise(reject, withError: .unsupportedService)
+      ME.unsupportedService.reject(reject: reject)
     }
   }
   
+  /// A private enum to handle exceptions and errors.
+  /// - generationKeyFailed: The hardware key generation failed.
+  /// - unsupportedService: The DeviceCheck App Attestation Service is not supported.
+  /// - attestationError: The attestation request failed.
+  /// - unsupportedIOSVersion: The iOS version is not supported.
+  /// - challengeError: The challenge encoding failed.
+  /// - clientDataEncodingError: The clientData encoding failed.
+  /// - generationAssertionFailed: The assertion generation failed.
+  private enum ModuleException: String, CaseIterable {
+    
+    case generationKeyFailed = "GENERATION_KEY_FAILED"
+    case unsupportedService = "UNSUPPORTED_SERVICE"
+    case attestationError = "ATTESTATION_ERROR"
+    case unsupportedIOSVersion = "UNSUPPORTED_IOS_VERSION"
+    case challengeError = "CHALLANGE_ERROR"
+    case clientDataEncodingError = "CLIENT_DATA_ENCODING_ERROR"
+    case generationAssertionFailed = "GENERATION_ASSERTION_FAILED"
+      
+      func error(userInfo: [String : Any]? = nil) -> NSError {
+        switch self {
+        case .generationKeyFailed:
+          return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
+        case .unsupportedService:
+          return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
+        case .attestationError:
+          return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
+        case .unsupportedIOSVersion:
+          return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
+        case .challengeError:
+          return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
+        case .clientDataEncodingError:
+          return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
+        case .generationAssertionFailed:
+          return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
+        }
+      }
+      
+      /// Rejects a promise with the error.
+      /// - Parameters:
+      ///  - reject: The promise reject block to call in case of an error.
+      ///  - moreUserInfo: A list of tuples to add more information to the error.
+      func reject(reject: RCTPromiseRejectBlock, _ moreUserInfo: (String, Any)...) {
+        var userInfo = [String : Any]()
+        moreUserInfo.forEach { userInfo[$0.0] = $0.1 }
+        let error = error(userInfo: userInfo)
+        reject("\(error.code)", error.domain, error)
+      }
+    }
 }
