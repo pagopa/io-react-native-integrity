@@ -1,19 +1,82 @@
 import * as React from 'react';
+import { StyleSheet, SafeAreaView, Text, ScrollView } from 'react-native';
+import {
+  isPlayServicesAvailable,
+  prepare,
+  requestToken,
+} from '@pagopa/io-react-native-integrity';
+import ButtonWithLoader from './components/ButtonWithLoader';
 
-import { StyleSheet, View, Text } from 'react-native';
-import { multiply } from '@pagopa/io-react-native-integrity';
+const GOOGLE_CLOUD_PROJECT_NUMBER = '1234567890';
 
 export default function App() {
-  const [result, setResult] = React.useState<number | undefined>();
+  const [isServiceAvailable, setIsServiceAvailable] =
+    React.useState<boolean>(false);
+  const [isPrepareLoading, setIsPrepareLoading] =
+    React.useState<boolean>(false);
+  const [isRequestTokenLoading, setIsRequestTokenLoading] =
+    React.useState<boolean>(false);
+  const [debugLog, setDebugLog] = React.useState<string>('.. >');
 
   React.useEffect(() => {
-    multiply(3, 7).then(setResult);
+    isPlayServicesAvailable()
+      .then((result) => {
+        setIsServiceAvailable(result);
+      })
+      .catch((error) => {
+        setDebugLog(error);
+      });
   }, []);
 
+  const prepareCallback = async () => {
+    if (isServiceAvailable) {
+      try {
+        setIsPrepareLoading(true);
+        await prepare(GOOGLE_CLOUD_PROJECT_NUMBER);
+        setIsPrepareLoading(false);
+      } catch (e) {
+        setIsPrepareLoading(false);
+        setDebugLog(`${e}`);
+      }
+    }
+  };
+
+  const requestTokenCallback = async () => {
+    if (isServiceAvailable) {
+      try {
+        setIsRequestTokenLoading(true);
+        const rq = await requestToken();
+
+        setIsRequestTokenLoading(false);
+        setDebugLog(rq);
+      } catch (e) {
+        setIsRequestTokenLoading(false);
+        setDebugLog(`${e}`);
+      }
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Text>Result: {result}</Text>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.h1}>Integrity Check Demo App</Text>
+      {isServiceAvailable ? (
+        <>
+          <ButtonWithLoader
+            title="Prepare"
+            onPress={() => prepareCallback()}
+            loading={isPrepareLoading}
+          />
+          <ButtonWithLoader
+            title="Get attestation"
+            onPress={() => requestTokenCallback()}
+            loading={isRequestTokenLoading}
+          />
+        </>
+      ) : null}
+      <ScrollView style={styles.debug}>
+        <Text>{debugLog}</Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -21,11 +84,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  box: {
-    width: 60,
-    height: 60,
-    marginVertical: 20,
+  h1: {
+    fontWeight: 'bold',
+    fontSize: 32,
+    textAlign: 'center',
+    marginTop: 50,
+    marginBottom: 50,
+  },
+  debug: {
+    width: '100%',
+    height: 300,
+    position: 'absolute',
+    bottom: 0,
+    backgroundColor: '#eaeaea',
   },
 });
