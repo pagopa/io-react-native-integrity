@@ -12,8 +12,13 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 const port = process.env.PORT || 3000;
 const nonce = uuid();
+
+// Please note that this is a simple example and the attestation should be stored in a secure way.
+// Every time the server restarts, the attestation is lost. Every time the app verify the attestation
+// this value be overwritten. This is just a simple example.
 let attestation: any = null;
 
+// The bundle identifier and team identifier are used to verify the attestation and assertion.
 const BUNDLE_IDENTIFIER = process.env.BUNDLE_IDENTIFIER || '';
 const TEAM_IDENTIFIER = process.env.TEAM_IDENTIFIER || '';
 
