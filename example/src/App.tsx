@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { StyleSheet, SafeAreaView, Text, ScrollView } from 'react-native';
 import {
+  getAttestation,
   isPlayServicesAvailable,
-  prepare,
-  requestToken,
+  prepareIntegrityToken,
+  requestIntegrityToken,
 } from '@pagopa/io-react-native-integrity';
 import ButtonWithLoader from './components/ButtonWithLoader';
 
@@ -15,6 +16,8 @@ export default function App() {
   const [isPrepareLoading, setIsPrepareLoading] =
     React.useState<boolean>(false);
   const [isRequestTokenLoading, setIsRequestTokenLoading] =
+    React.useState<boolean>(false);
+  const [isGetAttestationLoading, setIsGetAttestationLoading] =
     React.useState<boolean>(false);
   const [debugLog, setDebugLog] = React.useState<string>('.. >');
 
@@ -32,11 +35,11 @@ export default function App() {
     if (isServiceAvailable) {
       try {
         setIsPrepareLoading(true);
-        await prepare(GOOGLE_CLOUD_PROJECT_NUMBER);
+        await prepareIntegrityToken(GOOGLE_CLOUD_PROJECT_NUMBER);
         setIsPrepareLoading(false);
       } catch (e) {
         setIsPrepareLoading(false);
-        setDebugLog(`${e}`);
+        setDebugLog(JSON.stringify(e));
       }
     }
   };
@@ -45,7 +48,9 @@ export default function App() {
     if (isServiceAvailable) {
       try {
         setIsRequestTokenLoading(true);
-        const rq = await requestToken();
+        const rq = await requestIntegrityToken(
+          'lW1DCr5p4nLA2JkYU7BRYzCCByQplBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbnQIYPwJBZQ2V1lW1DCr5p4nLA2JkYU7BRYzCCByQi28plBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbnQIYPwJBZQ2V1lW1DCr5p4nLA2JkYU7BRYzCCByQi28plBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbnQIYPwJBZQ2V1lW1DCr5p4nLA2JkYU7BRYzCCByQi28plBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbn'
+        );
 
         setIsRequestTokenLoading(false);
         setDebugLog(rq);
@@ -53,6 +58,20 @@ export default function App() {
         setIsRequestTokenLoading(false);
         setDebugLog(`${e}`);
       }
+    }
+  };
+
+  const getAttestationCallback = async () => {
+    try {
+      setIsGetAttestationLoading(true);
+      const att = await getAttestation(
+        'lW1DCr5p4nLA2JkYU7BRYzCCByQi28plBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbnQIYPwJBZQ2V1'
+      );
+      setIsGetAttestationLoading(false);
+      setDebugLog(att);
+    } catch (e) {
+      setIsGetAttestationLoading(false);
+      setDebugLog(`${e}`);
     }
   };
 
@@ -67,9 +86,14 @@ export default function App() {
             loading={isPrepareLoading}
           />
           <ButtonWithLoader
-            title="Get attestation"
+            title="Get token"
             onPress={() => requestTokenCallback()}
             loading={isRequestTokenLoading}
+          />
+          <ButtonWithLoader
+            title="Get attestation"
+            onPress={() => getAttestationCallback()}
+            loading={isGetAttestationLoading}
           />
         </>
       ) : null}

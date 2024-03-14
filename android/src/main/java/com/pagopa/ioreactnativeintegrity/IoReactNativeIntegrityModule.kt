@@ -1,5 +1,15 @@
 package com.pagopa.ioreactnativeintegrity
 
+import android.content.pm.PackageManager
+import android.os.Build
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
+import android.security.keystore.KeyProperties
+import android.security.keystore.KeyProperties.SECURITY_LEVEL_STRONGBOX
+import android.security.keystore.KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT
+import android.security.keystore.KeyProperties.SECURITY_LEVEL_UNKNOWN_SECURE
+import android.util.Base64
+import androidx.annotation.RequiresApi
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -13,6 +23,12 @@ import com.google.android.play.core.integrity.StandardIntegrityManager
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityToken
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenProvider
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenRequest
+import java.security.KeyFactory
+import java.security.KeyPair
+import java.security.KeyPairGenerator
+import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.spec.ECGenParameterSpec
 
 
 class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
@@ -20,6 +36,18 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
 
   private lateinit var integrityTokenProvider: StandardIntegrityTokenProvider
 
+  private val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER)
+
+  /**
+   * Constructor which initializes the keystore engine.
+   */
+  init {
+    keyStore.load(null)
+  }
+
+  /**
+   * Get name of the package, required by React Native bridge.
+   */
   override fun getName(): String {
     return NAME
   }
@@ -37,9 +65,9 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * SERVICE_INVALID: 9
    * We map SUCCESS, SERVICE_UPDATING, SERVICE_VERSION_UPDATE_REQUIRED (0, 18, 2) to true.
    * SERVICE_MISSING, SERVICE_DISABLED and SERVICE_INVALID (1,3,9) to false.
+   * The promise is resolved to true if Google Play Services is available, to false otherwise.
    * [Source](https://developers.google.com/android/reference/com/google/android/gms/common/GoogleApiAvailability#isGooglePlayServicesAvailable(android.content.Context))
-   * @param promise - the React Native promise to be resolved.
-   * @return a resolved promise which is true if Google Play Services is available, false otherwise.
+   * @param promise the React Native promise to be resolved or reject.
    */
   @ReactMethod
   fun isPlayServicesAvailable (promise: Promise){
@@ -50,8 +78,20 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     promise.resolve(result)
   }
 
+  /**
+   * Preparation step for a [Play Integrity standard API request](https://developer.android.com/google/play/integrity/standard).
+   * It prepares the integrity token provider before obtaining the integrity verdict.
+   * It should be called well before the moment an integrity verdict is needed, for example
+   * when starting the application. It can also be called time to time to refresh it.
+   * The React Native promise is resolved with an empty payload on success, otherwise
+   * it gets rejected when:
+   * - The preparation fails;
+   * - The provided [cloudProjectNumber] format is incorrect.
+   * @param cloudProjectNumber a Google Cloud project number which is supposed to be composed only by numbers (Long).
+   * @param promise the React Native promise to be resolved or rejected.
+   */
   @ReactMethod
-  fun prepare(cloudProjectNumber: String, promise: Promise) {
+  fun prepareIntegrityToken(cloudProjectNumber: String, promise: Promise) {
     try {
       val cpn = cloudProjectNumber.toLong()
       val standardIntegrityManager: StandardIntegrityManager =
@@ -61,8 +101,8 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           .setCloudProjectNumber(cpn)
           .build()
       )
-        .addOnSuccessListener { integrityTokenProvider = it; promise.resolve(null) }
-        .addOnFailureListener { promise.reject(it) }
+        .addOnSuccessListener { res -> integrityTokenProvider = res; promise.resolve(null) }
+        .addOnFailureListener { ex -> ModuleException.PREPARE_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))) }
     }catch (_: NumberFormatException){
       ModuleException.WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT.reject(promise)
     }catch (e: Exception){
@@ -70,8 +110,19 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  /**
+   * Integrity token request step for a [Play Integrity standard API request](https://developer.android.com/google/play/integrity/standard).
+   * It requests an integrity token which is then attached to the request to be protected.
+   * It should be called AFTER [prepareIntegrityToken] has been called and resolved successfully.
+   * The React Native promise is resolved with with the token as payload or rejected when:
+   * - The integrity token request fails;
+   * - The [prepareIntegrityToken] function hasn't been called previously.
+   * @param requestHash a digest of all relevant request parameters (e.g. SHA256) from the user action or server request that is happening.
+   * The max size of this field is 500 bytes. Do not put sensitive information as plain text in this field.
+   * @param promise the React Native promise to be resolved or rejected.
+   */
   @ReactMethod
-  fun requestToken(requestHash: String?, promise: Promise) {
+  fun requestIntegrityToken(requestHash: String?, promise: Promise) {
     try {
       val integrityTokenResponse: Task<StandardIntegrityToken> = integrityTokenProvider.request(
         StandardIntegrityTokenRequest.builder()
@@ -79,13 +130,120 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           .build()
       )
       integrityTokenResponse
-        .addOnSuccessListener { response -> promise.resolve((response.token())) }
-        .addOnFailureListener { exception -> promise.reject(exception) }
+        .addOnSuccessListener { res -> promise.resolve((res.token())) }
+        .addOnFailureListener { ex -> ModuleException.REQUEST_TOKEN_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))) }
     }catch(_: UninitializedPropertyAccessException){
         ModuleException.PREPARE_NOT_CALLED.reject(promise)
     }
     catch (e: Exception){
       ModuleException.REQUEST_TOKEN_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e)))
+    }
+  }
+
+  /**
+   * Checks whether or not a [PrivateKey] is hardware backed (TEE/StrongBox) or not.
+   * Courtesy of @shadowsheep1
+   * @param key the [PrivateKey] to be checked.
+   * @returns true if the key is hardware backed according to its [security level](https://developer.android.com/reference/android/security/keystore/KeyProperties)
+   * with a fallback to the [isInsideSecureHardware](https://developer.android.com/reference/android/security/keystore/KeyInfo#isInsideSecureHardware())
+   * for version codes older than [Build.VERSION_CODES.S].
+   * False otherwise.
+   */
+  private fun isKeyHardwareBacked(key: PrivateKey): Boolean {
+    try {
+      val factory = KeyFactory.getInstance(
+        key.algorithm, KEYSTORE_PROVIDER
+      )
+      val keyInfo = factory.getKeySpec(key, KeyInfo::class.java)
+      return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        //
+        keyInfo.securityLevel == SECURITY_LEVEL_TRUSTED_ENVIRONMENT
+          || keyInfo.securityLevel == SECURITY_LEVEL_STRONGBOX
+          || keyInfo.securityLevel == SECURITY_LEVEL_UNKNOWN_SECURE
+      } else {
+        @Suppress("DEPRECATION") return keyInfo.isInsideSecureHardware
+      }
+    } catch (e: Exception) {
+      return false
+    }
+  }
+
+  /**
+   * Generates an attestation key pair using the [keyStore].
+   * @param keyAlias the key alias to generate.
+   * @param challenge the public key certificate for this key pair will contain an extension that
+   * describes the details of the key's configuration and authorizations, including the
+   * [challenge] value.
+   * If the key is in secure hardware, and if the secure hardware supports attestation,
+   * the certificate will be signed by a chain of certificates rooted at a trustworthy CA key.
+   * Otherwise the chain will be rooted at an untrusted certificate.
+   * @param useStrongBox indicates whether or not the key pair will be stored using StrongBox.
+   * @returns the generated key pair.
+   */
+  @RequiresApi(Build.VERSION_CODES.N)
+  private fun generateAttestationKey(keyAlias: String, challenge: ByteArray, useStrongBox: Boolean): KeyPair {
+      val purposes = KeyProperties.PURPOSE_VERIFY
+      val builder =
+        KeyGenParameterSpec.Builder(keyAlias, purposes)
+          .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1")) // P-256
+          .setDigests(KeyProperties.DIGEST_SHA256)
+          .setKeySize(256)
+          .setAttestationChallenge(challenge)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && useStrongBox) {
+        builder.setIsStrongBoxBacked(true)
+      }
+      val keyPairGenerator = KeyPairGenerator.getInstance(
+        KeyProperties.KEY_ALGORITHM_EC, KEYSTORE_PROVIDER
+      )
+      keyPairGenerator.initialize(builder.build())
+      return keyPairGenerator.generateKeyPair()
+  }
+
+  /**
+   * Generates a (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation].
+   * During key attestation, a key pair is generated along with its certificate chain,
+   * which can be used to verify the properties of that key pair.
+   * If the device supports hardware-level key attestation,
+   * the root certificate of the chain is signed using an attestation root key
+   * protected by the device's hardware-backed keystore.
+   * The promise is resolved with the chain or rejected when:
+   * - The device doesn't support key attestation;
+   * - The generated key pair is not hardware backed;
+   * - The [challenge] exceeds the size of 128 bytes;
+   * - The key attestation generation fails.
+   * @param challenge the challenge to be included which has a max size of 128 bytes.
+   * @param keyAlias optional key alias for the generated key pair.
+   * @param promise the React Native promise to be resolved or rejected.
+   */
+  @ReactMethod
+  fun getAttestation(challenge: String, keyAlias: String?, promise: Promise){
+    try{
+      // Remove this block if the minSdkVersion is set to 24
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+        ModuleException.UNSUPPORTED_DEVICE.reject(promise)
+        return
+      }
+      val alias = keyAlias ?: "attestationKeyAlias"
+      val hasStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+        reactApplicationContext.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+      val keyPair = generateAttestationKey(alias, challenge.toByteArray(), hasStrongBox)
+      if(!isKeyHardwareBacked(keyPair.private)){
+        // We check if the key is hardware backed just to be sure exclude software fallback
+        ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
+        return
+      }
+      val chain = keyStore.getCertificateChain(alias)
+      // The certificate chain consists of an array of certificates, thus we concat them into a string
+      var attestations = arrayOf<String>()
+      chain.forEachIndexed { _, certificate ->
+        val cert = Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
+        attestations += cert
+      }
+      val concatenatedAttestations = attestations.joinToString(",")
+      val encodedAttestation = Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
+      promise.resolve(encodedAttestation)
+    }catch(e: Exception) {
+      ModuleException.REQUEST_ATTESTATION_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e)))
     }
   }
 
@@ -95,6 +253,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
 
   companion object {
     const val NAME = "IoReactNativeIntegrity"
+    const val KEYSTORE_PROVIDER = "AndroidKeyStore"
     const val ERROR_USER_INFO_KEY = "error"
 
     private enum class ModuleException(
@@ -103,7 +262,10 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT(Exception("WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT")),
       PREPARE_FAILED(Exception("PREPARE_TOKEN_EXCEPTION")),
       PREPARE_NOT_CALLED(Exception("PREPARE_NOT_CALLED")),
-      REQUEST_TOKEN_FAILED(Exception("REQUEST_TOKEN_FAILED"));
+      REQUEST_TOKEN_FAILED(Exception("REQUEST_TOKEN_FAILED")),
+      REQUEST_ATTESTATION_FAILED(Exception("REQUEST_ATTESTATION_FAILED")),
+      KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")),
+      UNSUPPORTED_DEVICE(Exception("UNSUPPORTED_DEVICE"));
 
       fun reject(
         promise: Promise, vararg args: Pair<String, String>
