@@ -30,7 +30,11 @@ import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.spec.ECGenParameterSpec
 
-
+/**
+ * React Native bridge for Google Play Integrity API and key attestation.
+ * @property integrityTokenProvider the token integrity provider which should be initialized by calling [prepareIntegrityToken]
+ * @property keyStore the key store instance used to generate hardware backed keys and get a key attestation via [getAttestation]
+ */
 class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
 
@@ -249,6 +253,11 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     }.start()
   }
 
+  /**
+   * Extracts a message from an [Exception] with an empty string as fallback.
+   * @param e an exception.
+   * @return [e] message field or an empty string otherwise.
+   */
   private fun getExceptionMessageOrEmpty(e: Exception): String{
     return e.message ?: ""
   }
@@ -258,6 +267,12 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     const val KEYSTORE_PROVIDER = "AndroidKeyStore"
     const val ERROR_USER_INFO_KEY = "error"
 
+    /**
+     * Custom exceptions related to failure points.
+     * Each enum constant encapsulates a specific exception with an associated error message.
+     *
+     * @property ex the exception instance associated with the enum constant.
+     */
     private enum class ModuleException(
       val ex: Exception
     ) {
@@ -269,6 +284,12 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")),
       UNSUPPORTED_DEVICE(Exception("UNSUPPORTED_DEVICE"));
 
+      /**
+       * Rejects the provided promise with the appropriate error message and additional data.
+       *
+       * @param promise the promise to be rejected.
+       * @param args additional key-value pairs of data to be passed along with the error.
+       */
       fun reject(
         promise: Promise, vararg args: Pair<String, String>
       ) {
@@ -277,6 +298,13 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
         }
       }
 
+      /**
+       * Maps the additional key-value pairs of data to a pair containing the error message
+       * and a WritableMap of the additional data.
+       *
+       * @param args additional key-value pairs of data.
+       * @return A pair containing the error message and a WritableMap of the additional data.
+       */
       private fun exMap(vararg args: Pair<String, String>): Pair<String, WritableMap> {
         val writableMap = WritableNativeMap()
         args.forEach { writableMap.putString(it.first, it.second) }
