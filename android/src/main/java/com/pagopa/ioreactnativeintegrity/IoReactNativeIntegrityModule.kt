@@ -217,34 +217,36 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    */
   @ReactMethod
   fun getAttestation(challenge: String, keyAlias: String?, promise: Promise){
-    try{
-      // Remove this block if the minSdkVersion is set to 24
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-        ModuleException.UNSUPPORTED_DEVICE.reject(promise)
-        return
+    Thread {
+      try{
+        // Remove this block if the minSdkVersion is set to 24
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+          ModuleException.UNSUPPORTED_DEVICE.reject(promise)
+          return@Thread
+        }
+        val alias = keyAlias ?: "attestationKeyAlias"
+        val hasStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+          reactApplicationContext.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+        val keyPair = generateAttestationKey(alias, challenge.toByteArray(), hasStrongBox)
+        if(!isKeyHardwareBacked(keyPair.private)){
+          // We check if the key is hardware backed just to be sure exclude software fallback
+          ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
+          return@Thread
+        }
+        val chain = keyStore.getCertificateChain(alias)
+        // The certificate chain consists of an array of certificates, thus we concat them into a string
+        var attestations = arrayOf<String>()
+        chain.forEachIndexed { _, certificate ->
+          val cert = Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
+          attestations += cert
+        }
+        val concatenatedAttestations = attestations.joinToString(",")
+        val encodedAttestation = Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
+        promise.resolve(encodedAttestation)
+      }catch(e: Exception) {
+        ModuleException.REQUEST_ATTESTATION_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e)))
       }
-      val alias = keyAlias ?: "attestationKeyAlias"
-      val hasStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-        reactApplicationContext.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
-      val keyPair = generateAttestationKey(alias, challenge.toByteArray(), hasStrongBox)
-      if(!isKeyHardwareBacked(keyPair.private)){
-        // We check if the key is hardware backed just to be sure exclude software fallback
-        ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
-        return
-      }
-      val chain = keyStore.getCertificateChain(alias)
-      // The certificate chain consists of an array of certificates, thus we concat them into a string
-      var attestations = arrayOf<String>()
-      chain.forEachIndexed { _, certificate ->
-        val cert = Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
-        attestations += cert
-      }
-      val concatenatedAttestations = attestations.joinToString(",")
-      val encodedAttestation = Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
-      promise.resolve(encodedAttestation)
-    }catch(e: Exception) {
-      ModuleException.REQUEST_ATTESTATION_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e)))
-    }
+    }.start()
   }
 
   private fun getExceptionMessageOrEmpty(e: Exception): String{
