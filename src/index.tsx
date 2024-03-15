@@ -18,14 +18,29 @@ const IoReactNativeIntegrity = NativeModules.IoReactNativeIntegrity
     );
 
 /**
+ * Checks whether the current platform is Android or not.
+ * @returns true if the current platform is Android, false otherwise.
+ */
+const isAndroid = () => Platform.OS === 'android';
+
+/**
+ * Error message for functions available only on Android.
+ */
+const NOT_ANDROID_ERROR = 'This function is available only on Android';
+
+/**
+ * ANDROID ONLY
  * Checks whether Google Play Services is available on the device or not.
  * @return a promise resolved to true if Google Play Services is available, to false otherwise.
  */
 export function isPlayServicesAvailable(): Promise<boolean> {
-  return IoReactNativeIntegrity.isPlayServicesAvailable();
+  return isAndroid()
+    ? IoReactNativeIntegrity.isPlayServicesAvailable()
+    : Promise.resolve(false);
 }
 
 /**
+ * ANDROID ONLY
  * Preparation step for a [Play Integrity standard API request](https://developer.android.com/google/play/integrity/standard).
  * It prepares the integrity token provider before obtaining the integrity verdict.
  * It should be called well before the moment an integrity verdict is needed, for example
@@ -41,10 +56,13 @@ export function isPlayServicesAvailable(): Promise<boolean> {
 export function prepareIntegrityToken(
   cloudProjectNumber: string
 ): Promise<void> {
-  return IoReactNativeIntegrity.prepareIntegrityToken(cloudProjectNumber);
+  return isAndroid()
+    ? IoReactNativeIntegrity.prepareIntegrityToken(cloudProjectNumber)
+    : Promise.reject(NOT_ANDROID_ERROR);
 }
 
 /**
+ * ANDROID ONLY
  * Integrity token request step for a [Play Integrity standard API request](https://developer.android.com/google/play/integrity/standard).
  * It requests an integrity token which is then attached to the request to be protected.
  * It should be called AFTER {@link prepareIntegrityToken} has been called and resolved successfully.
@@ -56,10 +74,13 @@ export function prepareIntegrityToken(
  * - The {@link prepareIntegrityToken} function hasn't been called previously.
  */
 export function requestIntegrityToken(requestHash?: string): Promise<string> {
-  return IoReactNativeIntegrity.requestIntegrityToken(requestHash);
+  return isAndroid()
+    ? IoReactNativeIntegrity.requestIntegrityToken(requestHash)
+    : Promise.reject(NOT_ANDROID_ERROR);
 }
 
 /**
+ * ANDROID ONLY
  * Generates a (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation].
  * During key attestation, a key pair is generated along with its certificate chain,
  * which can be used to verify the properties of that key pair.
@@ -78,10 +99,13 @@ export function getAttestation(
   challenge: string,
   keyAlias?: string
 ): Promise<string> {
-  return IoReactNativeIntegrity.getAttestation(challenge, keyAlias);
+  return isAndroid()
+    ? IoReactNativeIntegrity.getAttestation(challenge, keyAlias)
+    : Promise.reject(NOT_ANDROID_ERROR);
 }
 
 /**
+ * ANDROID ONLY
  * Possible error codes returned by the library on Android when a promise is rejected.
  */
 type IntegrityErrorCodesAndroid =
