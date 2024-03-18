@@ -2560,8 +2560,7 @@ __metadata:
     babel-plugin-module-resolver: ^5.0.0
     buffer: ^6.0.3
     react: 18.2.0
-    react-native: 0.73.5
-    react-native-sha256: ^1.4.10
+    react-native: 0.73.6
   languageName: unknown
   linkType: soft
 
@@ -2583,7 +2582,7 @@ __metadata:
     jest: ^29.7.0
     prettier: ^3.0.3
     react: 18.2.0
-    react-native: 0.73.5
+    react-native: 0.73.6
     react-native-builder-bob: ^0.23.2
     release-it: ^15.0.0
     turbo: ^1.10.7
@@ -10762,16 +10761,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-sha256@npm:^1.4.10":
-  version: 1.4.10
-  resolution: "react-native-sha256@npm:1.4.10"
-  checksum: db49be891c2eece1de582215637c463fc5636fce7d58c2e78f1e60d6847eb121d3233f12c5793f43a193df6a79852eec459ef1a7e34c70133146a9fe332f055b
-  languageName: node
-  linkType: hard
-
-"react-native@npm:0.73.5":
-  version: 0.73.5
-  resolution: "react-native@npm:0.73.5"
+"react-native@npm:0.73.6":
+  version: 0.73.6
+  resolution: "react-native@npm:0.73.6"
   dependencies:
     "@jest/create-cache-key-function": ^29.6.3
     "@react-native-community/cli": 12.3.6
@@ -10815,7 +10807,7 @@ __metadata:
     react: 18.2.0
   bin:
     react-native: cli.js
-  checksum: 107037a28b37e5d8883e8d7553d48e15d802ecf2b3ecee834f79c5dd653761ac23506a08c3a48f357bf872fb0857078ae31d226623a8742e530b065fed5d9d47
+  checksum: 20e71c902f165c15add9f841bbc555c7b8495235122ccc42f5f1c5c0189c453651a450e59b6541188d8edb829a2aac524a1762501fb6ecebc4c89e9aa6667682
   languageName: node
   linkType: hard
 
