@@ -108,7 +108,7 @@ export default function IosApp() {
           />
         </>
       ) : (
-        <Text style={styles.h1}>Attestation Service is not available</Text>
+        <Text style={styles.h2}>{'Attestation Service is not available'}</Text>
       )}
       <ScrollView style={styles.debug}>
         <Text>{debugLog}</Text>
@@ -125,6 +125,13 @@ const styles = StyleSheet.create({
   h1: {
     fontWeight: 'bold',
     fontSize: 32,
+    textAlign: 'center',
+    marginTop: 50,
+    marginBottom: 50,
+  },
+  h2: {
+    fontWeight: 'bold',
+    fontSize: 14,
     textAlign: 'center',
     marginTop: 50,
     marginBottom: 50,
