@@ -107,7 +107,9 @@ export default function IosApp() {
             loading={hsWithAssertion === undefined}
           />
         </>
-      ) : null}
+      ) : (
+        <Text style={styles.h1}>Attestation Service is not available</Text>
+      )}
       <ScrollView style={styles.debug}>
         <Text>{debugLog}</Text>
       </ScrollView>
