@@ -51,7 +51,9 @@ const IoReactNativeIntegrity = NativeModules.IoReactNativeIntegrity
  * @returns a promise that resolves to a boolean.
  */
 export function isAttestationServiceAvailable(): Promise<boolean> {
-  return IoReactNativeIntegrity.isAttestationServiceAvailable();
+  return Platform.OS === 'ios'
+    ? IoReactNativeIntegrity.isAttestationServiceAvailable()
+    : Promise.resolve(false); // TODO: implement for Android
 }
 
 /**

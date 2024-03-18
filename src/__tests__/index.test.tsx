@@ -1,4 +1,4 @@
-import { NativeModules } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import {
   generateHardwareKey,
   getAttestation,
@@ -21,12 +21,29 @@ jest.mock('react-native', () => ({
 }));
 
 describe('Test integrity check function exposed by main package', () => {
-  it('isAttestationServiceAvailable it should be called correctly', async () => {
+  it('should be called correctly on iOS', async () => {
+    Platform.OS = 'ios';
+
     const spy = jest.spyOn(
       NativeModules.IoReactNativeIntegrity,
       'isAttestationServiceAvailable'
     );
+
     await isAttestationServiceAvailable();
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should be called correctly on Android', async () => {
+    Platform.OS = 'android';
+
+    const spy = jest.spyOn(
+      NativeModules.IoReactNativeIntegrity,
+      'isAttestationServiceAvailable'
+    );
+
+    await isAttestationServiceAvailable();
+
     expect(spy).toHaveBeenCalled();
   });
 
