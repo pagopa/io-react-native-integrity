@@ -2558,8 +2558,10 @@ __metadata:
     "@react-native/metro-config": 0.73.5
     "@react-native/typescript-config": 0.73.1
     babel-plugin-module-resolver: ^5.0.0
+    buffer: ^6.0.3
     react: 18.2.0
     react-native: 0.73.6
+    react-native-sha256: ^1.4.10
   languageName: unknown
   linkType: soft
 
@@ -10757,6 +10759,13 @@ __metadata:
   bin:
     bob: bin/bob
   checksum: 1bee701c21f28f10c5737c8000e7fd6d8f641cf46fe7de03f5086d9951d2c5f3cb45375e292519b85f44a28f907e37f6c7bff324cfb1913b3bee0cb4db2efeb7
+  languageName: node
+  linkType: hard
+
+"react-native-sha256@npm:^1.4.10":
+  version: 1.4.10
+  resolution: "react-native-sha256@npm:1.4.10"
+  checksum: db49be891c2eece1de582215637c463fc5636fce7d58c2e78f1e60d6847eb121d3233f12c5793f43a193df6a79852eec459ef1a7e34c70133146a9fe332f055b
   languageName: node
   linkType: hard
 

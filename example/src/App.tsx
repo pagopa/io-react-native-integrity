@@ -1,7 +1,8 @@
 import * as React from 'react';
-import AndroidApp from './AndroidApp';
 import { Platform } from 'react-native';
+import IosApp from './IosApp';
+import AndroidApp from './AndroidApp';
 
 export default function App() {
-  return Platform.OS === 'android' ? <AndroidApp /> : <></>;
+  return Platform.OS === 'ios' ? <IosApp /> : <AndroidApp />;
 }

@@ -1,5 +1,45 @@
 import { NativeModules, Platform } from 'react-native';
 
+/**
+ * ANDROID ONLY
+ * Error codes returned by the Android module.
+ */
+type IntegrityErrorCodesAndroid =
+  | 'WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT'
+  | 'PREPARE_FAILED'
+  | 'PREPARE_NOT_CALLED'
+  | 'REQUEST_TOKEN_FAILED'
+  | 'REQUEST_ATTESTATION_FAILED'
+  | 'KEY_IS_NOT_HARDWARE_BACKED'
+  | 'UNSUPPORTED_DEVICE';
+
+/**
+ * Error codes returned by the iOS module.
+ */
+type IntegrityErrorCodesIOS =
+  | 'GENERATION_KEY_FAILED'
+  | 'UNSUPPORTED_SERVICE'
+  | 'ATTESTATION_ERROR'
+  | 'UNSUPPORTED_IOS_VERSION'
+  | 'CHALLANGE_ERROR'
+  | 'CLIENT_DATA_ENCODING_ERROR'
+  | 'GENERATION_ASSERTION_FAILED';
+
+export type IntegrityErrorCodes =
+  | IntegrityErrorCodesIOS
+  | IntegrityErrorCodesAndroid;
+
+/**
+ * Error type returned by a rejected promise.
+ *
+ * If additional error information are available,
+ * they are stored in the {@link IntegrityError["userInfo"]} field.
+ */
+export type IntegrityError = {
+  message: IntegrityErrorCodes;
+  userInfo: Record<string, string>;
+};
+
 const LINKING_ERROR =
   `The package '@pagopa/io-react-native-integrity' doesn't seem to be linked. Make sure: \n\n` +
   Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
@@ -16,6 +56,69 @@ const IoReactNativeIntegrity = NativeModules.IoReactNativeIntegrity
         },
       }
     );
+
+/**
+ * This function checks if the attestation service is available on the device.
+ *
+ * If it is not possible to retrive the key, the promise is rejected providing an
+ * instance of {@link IntegrityError}.
+ *
+ * @returns a promise that resolves to a boolean.
+ */
+export function isAttestationServiceAvailable(): Promise<boolean> {
+  return Platform.OS === 'ios'
+    ? IoReactNativeIntegrity.isAttestationServiceAvailable()
+    : Promise.resolve(false); // TODO: implement for Android
+}
+
+/**
+ * This function generates a hardware key that can be used into the attestation process.
+ *
+ * If it is not possible to retrive the key, the promise is rejected providing an
+ * instance of {@link IntegrityError}.
+ *
+ * @returns a promise that resolves to a string.
+ */
+export function generateHardwareKey(): Promise<string> {
+  return IoReactNativeIntegrity.generateHardwareKey();
+}
+
+/**
+ * This function generates an attestation for the given challenge and hardware key.
+ *
+ * If it is not possible to retrive the attestation, the promise is rejected providing an
+ * instance of {@link IntegrityError}.
+ *
+ * @param challenge challange to be used in the attestation process returned byt a backend service
+ * @param hardwareKeyTag hardware key to be used in the attestation process
+ * @returns a promise that resolves to a string.
+ */
+export function getAttestation(
+  challenge: string,
+  hardwareKeyTag: string
+): Promise<string> {
+  return IoReactNativeIntegrity.getAttestation(challenge, hardwareKeyTag);
+}
+
+/**
+ * This function generates a signature for the given client data given an hardware key.
+ *
+ * If it is not possible to retrive the signature, the promise is rejected providing an
+ * instance of {@link IntegrityError}.
+ *
+ * @param clientData client data to be signed
+ * @param hardwareKeyTag hardware key to be used in the signature process
+ * @returns a promise that resolves to a string.
+ */
+export function generateHardwareSignatureWithAssertion(
+  clientData: string,
+  hardwareKeyTag: string
+): Promise<string> {
+  return IoReactNativeIntegrity.generateHardwareSignatureWithAssertion(
+    clientData,
+    hardwareKeyTag
+  );
+}
 
 /**
  * Checks whether the current platform is Android or not.
@@ -78,58 +181,3 @@ export function requestIntegrityToken(requestHash?: string): Promise<string> {
     ? IoReactNativeIntegrity.requestIntegrityToken(requestHash)
     : Promise.reject(NOT_ANDROID_ERROR);
 }
-
-/**
- * ANDROID ONLY
- * Generates a (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation].
- * During key attestation, a key pair is generated along with its certificate chain,
- * which can be used to verify the properties of that key pair.
- * If the device supports hardware-level key attestation,
- * the root certificate of the chain is signed using an attestation root key
- * protected by the device's hardware-backed keystore.
- * @param challenge the challenge to be included which has a max size of 128 bytes.
- * @param keyAlias optional key alias for the generated key pair.
- * @returns a resolved promise with the attestation chain as payload, rejected otherwise when:
- * - The device doesn't support key attestation;
- * - The generated key pair is not hardware backed;
- * - The [challenge] exceeds the size of 128 bytes;
- * - The key attestation generation fails.
- */
-export function getAttestation(
-  challenge: string,
-  keyAlias?: string
-): Promise<string> {
-  return isAndroid()
-    ? IoReactNativeIntegrity.getAttestation(challenge, keyAlias)
-    : Promise.reject(NOT_ANDROID_ERROR);
-}
-
-/**
- * ANDROID ONLY
- * Possible error codes returned by the library on Android when a promise is rejected.
- */
-type IntegrityErrorCodesAndroid =
-  | 'WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT'
-  | 'PREPARE_FAILED'
-  | 'PREPARE_NOT_CALLED'
-  | 'REQUEST_TOKEN_FAILED'
-  | 'REQUEST_ATTESTATION_FAILED'
-  | 'KEY_IS_NOT_HARDWARE_BACKED'
-  | 'UNSUPPORTED_DEVICE';
-
-/**
- * Type of the error codes returned by the library when a promise is rejected.
- * It should be a union of Android and iOS error codes.
- */
-export type IntegrityErrorCodes = IntegrityErrorCodesAndroid;
-
-/**
- * Error type returned by a rejected promise.
- *
- * If additional error information are available,
- * they are stored in the {@link CryptoError["info"]} field.
- */
-export type IntegrityError = {
-  message: IntegrityErrorCodes;
-  info: Record<string, string>;
-};
