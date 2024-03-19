@@ -174,7 +174,7 @@ export default function App() {
         </>
       ) : null}
       <ScrollView style={styles.debug}>
-        <Text>{debugLog}</Text>
+        <Text style={styles.h2}>{debugLog}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -191,6 +191,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     margin: 20,
+  },
+  h2: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    margin: 10,
   },
   debug: {
     flex: 1,
