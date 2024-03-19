@@ -172,7 +172,9 @@ export default function App() {
             loading={false}
           />
         </>
-      ) : null}
+      ) : (
+        <Text style={styles.h2}>{'Attestation Service is not available'}</Text>
+      )}
       <ScrollView style={styles.debug}>
         <Text style={styles.h2}>{debugLog}</Text>
       </ScrollView>
@@ -183,23 +185,27 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   h1: {
-    fontSize: 20,
     fontWeight: 'bold',
-    margin: 20,
+    fontSize: 32,
+    textAlign: 'center',
+    marginTop: 50,
+    marginBottom: 50,
   },
   h2: {
-    fontSize: 18,
     fontWeight: 'bold',
-    margin: 10,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 50,
+    marginBottom: 50,
   },
   debug: {
-    flex: 1,
     width: '100%',
-    padding: 20,
+    height: 300,
+    position: 'absolute',
+    bottom: 0,
+    backgroundColor: '#eaeaea',
   },
 });
