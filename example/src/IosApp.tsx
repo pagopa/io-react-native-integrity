@@ -5,6 +5,7 @@ import {
   getAttestation,
   isAttestationServiceAvailable,
   generateHardwareSignatureWithAssertion,
+  type IntegrityError,
 } from '@pagopa/io-react-native-integrity';
 import { BACKEND_ADDRESS } from '@env';
 import ButtonWithLoader from './components/ButtonWithLoader';
@@ -39,8 +40,8 @@ export default function App() {
       .then((result) => {
         setIsServiceAvailable(result);
       })
-      .catch((error) => {
-        setDebugLog(error);
+      .catch((error: IntegrityError) => {
+        setDebugLog(error.message);
       });
   }, []);
 
@@ -173,7 +174,7 @@ export default function App() {
         </>
       ) : null}
       <ScrollView style={styles.debug}>
-        <Text>{debugLog}</Text>
+        <Text style={styles.h2}>{debugLog}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -190,6 +191,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     margin: 20,
+  },
+  h2: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    margin: 10,
   },
   debug: {
     flex: 1,

@@ -109,5 +109,5 @@ app.post(`/assertion/verify`, (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:3000`);
+  console.log(`[server]: Server is running at http://localhost:${port}`);
 });
