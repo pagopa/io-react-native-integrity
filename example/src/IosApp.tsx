@@ -6,6 +6,7 @@ import {
   getAttestation,
   isAttestationServiceAvailable,
   generateHardwareSignatureWithAssertion,
+  type IntegrityError,
 } from '@pagopa/io-react-native-integrity';
 import ButtonWithLoader from './components/ButtonWithLoader';
 
@@ -28,8 +29,8 @@ export default function IosApp() {
       .then((result) => {
         setIsServiceAvailable(result);
       })
-      .catch((error) => {
-        setDebugLog(error);
+      .catch((error: IntegrityError) => {
+        setDebugLog(error.message);
       });
   }, []);
 
