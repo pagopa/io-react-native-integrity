@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import verifyAttestation from './verifyAttestation';
 import bodyParser from 'body-parser';
 import verifyAssertion from './verifyAssertion';
+import androidRouter from './android/androidRouter';
 
 dotenv.config();
 const app = express();
@@ -21,6 +22,11 @@ let attestation: any = null;
 // The bundle identifier and team identifier are used to verify the attestation and assertion.
 const BUNDLE_IDENTIFIER = process.env.BUNDLE_IDENTIFIER || '';
 const TEAM_IDENTIFIER = process.env.TEAM_IDENTIFIER || '';
+
+/**
+ * Router for the android specific endpoints.
+ */
+app.use('/android', androidRouter);
 
 /**
  * This endpoint is used to get the nonce for the attestation process.

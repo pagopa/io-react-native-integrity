@@ -7,8 +7,7 @@ import {
   requestIntegrityToken,
 } from '@pagopa/io-react-native-integrity';
 import ButtonWithLoader from './components/ButtonWithLoader';
-
-const GOOGLE_CLOUD_PROJECT_NUMBER = '1234567890';
+import { BACKEND_ADDRESS, GOOGLE_CLOUD_PROJECT_NUMBER } from '@env';
 
 export default function AndroidApp() {
   const [isServiceAvailable, setIsServiceAvailable] =
@@ -17,7 +16,12 @@ export default function AndroidApp() {
     React.useState<boolean>(false);
   const [isRequestTokenLoading, setIsRequestTokenLoading] =
     React.useState<boolean>(false);
+  const [integrityToken, setIntegrityToken] = React.useState<
+    string | undefined
+  >();
   const [isGetAttestationLoading, setIsGetAttestationLoading] =
+    React.useState<boolean>(false);
+  const [isVerifyintegrityTokenLoading, setIsVerifyintegrityTokenLoading] =
     React.useState<boolean>(false);
   const [debugLog, setDebugLog] = React.useState<string>('.. >');
 
@@ -31,7 +35,7 @@ export default function AndroidApp() {
       });
   }, []);
 
-  const prepareCallback = async () => {
+  const prepare = async () => {
     if (isServiceAvailable) {
       try {
         setIsPrepareLoading(true);
@@ -44,15 +48,13 @@ export default function AndroidApp() {
     }
   };
 
-  const requestTokenCallback = async () => {
+  const requestToken = async () => {
     if (isServiceAvailable) {
       try {
         setIsRequestTokenLoading(true);
-        const rq = await requestIntegrityToken(
-          'lW1DCr5p4nLA2JkYU7BRYzCCByQplBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbnQIYPwJBZQ2V1lW1DCr5p4nLA2JkYU7BRYzCCByQi28plBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbnQIYPwJBZQ2V1lW1DCr5p4nLA2JkYU7BRYzCCByQi28plBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbnQIYPwJBZQ2V1lW1DCr5p4nLA2JkYU7BRYzCCByQi28plBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbn'
-        );
-
+        const rq = await requestIntegrityToken('randomvalue');
         setIsRequestTokenLoading(false);
+        setIntegrityToken(rq);
         setDebugLog(rq);
       } catch (e) {
         setIsRequestTokenLoading(false);
@@ -61,16 +63,44 @@ export default function AndroidApp() {
     }
   };
 
-  const getAttestationCallback = async () => {
+  const requestAttestation = async () => {
     try {
       setIsGetAttestationLoading(true);
-      const att = await getAttestation(
-        'lW1DCr5p4nLA2JkYU7BRYzCCByQi28plBcrXpEMNHanu8OE43sHpRqi1SAnUQTSaFVyYOh4GrXfTJuBIIoriwbhGizYWeHYxOWh2cGs0pLcXUROXYAbnQIYPwJBZQ2V1'
-      );
+      const att = await getAttestation('randomvalue', 'integrity-key');
       setIsGetAttestationLoading(false);
       setDebugLog(att);
     } catch (e) {
       setIsGetAttestationLoading(false);
+      setDebugLog(`${e}`);
+    }
+  };
+
+  const verifyToken = async () => {
+    try {
+      if (integrityToken === undefined) {
+        setDebugLog(
+          'Integrity token is undefined, please call prepare and get token first.'
+        );
+        return;
+      }
+      setIsVerifyintegrityTokenLoading(true);
+      const result = await fetch(
+        `${BACKEND_ADDRESS}/android/verifyIntegrityToken`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            integrityToken,
+          }),
+        }
+      );
+      const response = await result.json();
+      setIsVerifyintegrityTokenLoading(false);
+      setDebugLog(JSON.stringify(response));
+    } catch (e) {
       setDebugLog(`${e}`);
     }
   };
@@ -82,17 +112,22 @@ export default function AndroidApp() {
         <>
           <ButtonWithLoader
             title="Prepare"
-            onPress={() => prepareCallback()}
+            onPress={() => prepare()}
             loading={isPrepareLoading}
           />
           <ButtonWithLoader
             title="Get token"
-            onPress={() => requestTokenCallback()}
+            onPress={() => requestToken()}
             loading={isRequestTokenLoading}
           />
           <ButtonWithLoader
+            title="Verify Token"
+            onPress={() => verifyToken()}
+            loading={isVerifyintegrityTokenLoading}
+          />
+          <ButtonWithLoader
             title="Get attestation"
-            onPress={() => getAttestationCallback()}
+            onPress={() => requestAttestation()}
             loading={isGetAttestationLoading}
           />
         </>
