@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import { verifyIntegrityToken } from './androidIntegrity';
+import { verifyAttestation, verifyIntegrityToken } from './androidIntegrity';
 
 const router: Router = express.Router();
 
@@ -43,6 +43,28 @@ router.post('/verifyIntegrityToken', async (req, res) => {
     res
       .status(500)
       .send({ error: 'An error occurred while verifying the integrity token' });
+  }
+});
+
+/**
+ * Verifies a Google Play Integrity Token.
+ * The check is done for a standard request and the token is decrypted and verified on Google Cloud, not locally.
+ * The GOOGLE_APPLICATION_CREDENTIALS and ANDROID_BUNDLE_IDENTIFIER environment variables must be set.
+ * @param integrityToken - The integrity token to verify.
+ * @returns The result of the integrity token verification.
+ */
+router.post('/verifyAttestation', async (req, res) => {
+  console.debug(
+    `Key attestation verdict was requested: ${JSON.stringify(req.body, null, 2)}`
+  );
+  try {
+    await verifyAttestation(req.body.attestation);
+    res.status(200).send({ result: 'Attestation verified' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      error: `An error occurred while verifying the key attestation token ${error}`,
+    });
   }
 });
 

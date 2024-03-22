@@ -19,10 +19,14 @@ export default function AndroidApp() {
   const [integrityToken, setIntegrityToken] = React.useState<
     string | undefined
   >();
-  const [isGetAttestationLoading, setIsGetAttestationLoading] =
-    React.useState<boolean>(false);
   const [isVerifyintegrityTokenLoading, setIsVerifyintegrityTokenLoading] =
     React.useState<boolean>(false);
+  const [isGetAttestationLoading, setIsGetAttestationLoading] =
+    React.useState<boolean>(false);
+  const [attestation, setAttestation] = React.useState<string | undefined>();
+  const [isVerifyAttestationLoading, setIsVerifyAttestationLoading] =
+    React.useState<boolean>(false);
+
   const [debugLog, setDebugLog] = React.useState<string>('.. >');
 
   React.useEffect(() => {
@@ -67,6 +71,7 @@ export default function AndroidApp() {
     try {
       setIsGetAttestationLoading(true);
       const att = await getAttestation('randomvalue', 'integrity-key');
+      setAttestation(att);
       setIsGetAttestationLoading(false);
       setDebugLog(att);
     } catch (e) {
@@ -101,6 +106,38 @@ export default function AndroidApp() {
       setIsVerifyintegrityTokenLoading(false);
       setDebugLog(JSON.stringify(response));
     } catch (e) {
+      setIsVerifyintegrityTokenLoading(false);
+      setDebugLog(`${e}`);
+    }
+  };
+
+  const verifyAttestation = async () => {
+    try {
+      if (attestation === undefined) {
+        setDebugLog(
+          'Attestation is undefined, please call get attestation first.'
+        );
+        return;
+      }
+      setIsVerifyAttestationLoading(true);
+      const result = await fetch(
+        `${BACKEND_ADDRESS}/android/verifyAttestation`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            attestation,
+          }),
+        }
+      );
+      const response = await result.json();
+      setIsVerifyAttestationLoading(false);
+      setDebugLog(JSON.stringify(response));
+    } catch (e) {
+      setIsVerifyAttestationLoading(false);
       setDebugLog(`${e}`);
     }
   };
@@ -110,6 +147,7 @@ export default function AndroidApp() {
       <Text style={styles.h1}>Integrity Check Demo App</Text>
       {isServiceAvailable ? (
         <>
+          <Text>Play Integrity Standard Request</Text>
           <ButtonWithLoader
             title="Prepare"
             onPress={() => prepare()}
@@ -125,10 +163,16 @@ export default function AndroidApp() {
             onPress={() => verifyToken()}
             loading={isVerifyintegrityTokenLoading}
           />
+          <Text>Key Attestation</Text>
           <ButtonWithLoader
             title="Get attestation"
             onPress={() => requestAttestation()}
             loading={isGetAttestationLoading}
+          />
+          <ButtonWithLoader
+            title="Verify attestation"
+            onPress={() => verifyAttestation()}
+            loading={isVerifyAttestationLoading}
           />
         </>
       ) : null}

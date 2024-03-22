@@ -45,6 +45,8 @@ $ cd ios && bundle exec pod install && cd ..
 ```bash
 # Android
 $ yarn android
+# If you want to use the local server, you need to reverse the 3000 port
+$ adb reverse tcp:3000 tcp:3000
 
 # iOS
 $ yarn ios
