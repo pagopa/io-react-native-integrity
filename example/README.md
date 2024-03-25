@@ -40,6 +40,22 @@ $ yarn install
 $ cd ios && bundle exec pod install && cd ..
 ```
 
+## Environment variables
+
+In order to run the app, you need to create a `.env` file by copying the `.env.local` file and updating the values.
+
+```bash
+$ cp .env.local .env
+```
+
+For the Google Play Integrity API calls, you need to update the `GOOGLE_CLOUD_PROJECT_NUMBER` value. This requires a Google Cloud project with the Play Integrity API enabled. Follow the official
+documentation provided by Google [here](https://developer.android.com/google/play/integrity/setup).
+
+## Local server
+
+If you want to verify the tokens and attestations generate by the example app you can use the provided local server. By default, the `.env.local` file is configured to use it but you can customize the `BACKEND_ADDRESS` value to use a different server.
+More information about the local server setup can be found in its [README](../backend/README.md).
+
 ## Run the app
 
 ```bash
