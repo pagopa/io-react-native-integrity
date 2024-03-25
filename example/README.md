@@ -42,7 +42,7 @@ $ cd ios && bundle exec pod install && cd ..
 
 ## Environment variables
 
-In order to run the app, you need to create a `.env` file by copying the `.env.local` file and updating the values.
+In order to run the app, you need to create a `.env` file by copying the `.env.local` file and updating its values.
 
 ```bash
 $ cp .env.local .env
