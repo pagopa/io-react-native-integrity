@@ -37,7 +37,7 @@ import java.security.spec.ECGenParameterSpec
 class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
 
-  private lateinit var integrityTokenProvider: StandardIntegrityTokenProvider
+  private var integrityTokenProvider: StandardIntegrityTokenProvider? = null
 
   private val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER)
 
@@ -133,17 +133,18 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   @ReactMethod
   fun requestIntegrityToken(requestHash: String?, promise: Promise) {
     try {
-      val integrityTokenResponse = integrityTokenProvider.request(
+      val integrityTokenResponse = integrityTokenProvider?.request(
         StandardIntegrityTokenRequest.builder().setRequestHash(requestHash).build()
       )
-      integrityTokenResponse.addOnSuccessListener { res -> promise.resolve((res.token())) }
-        .addOnFailureListener { ex ->
+      integrityTokenResponse?.apply {
+        addOnSuccessListener { res -> promise.resolve((res.token())) }
+        addOnFailureListener { ex ->
           ModuleException.REQUEST_TOKEN_FAILED.reject(
-            promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
+            promise,
+            Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
           )
         }
-    } catch (_: UninitializedPropertyAccessException) {
-      ModuleException.PREPARE_NOT_CALLED.reject(promise)
+      } ?: ModuleException.PREPARE_NOT_CALLED.reject(promise)
     } catch (e: Exception) {
       ModuleException.REQUEST_TOKEN_FAILED.reject(
         promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
