@@ -16,6 +16,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.WritableNativeMap
+import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.tasks.Task
 import com.google.android.play.core.integrity.IntegrityManagerFactory
@@ -75,12 +76,14 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    */
   @ReactMethod
   fun isPlayServicesAvailable(promise: Promise) {
-    val result = when (GoogleApiAvailability.getInstance()
-      .isGooglePlayServicesAvailable(reactApplicationContext)) {
-      0, 18, 2 -> true
-      else -> false
-    }
-    promise.resolve(result)
+    val status =
+      GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(reactApplicationContext)
+    val isAvailable = status in listOf(
+      ConnectionResult.SUCCESS,
+      ConnectionResult.SERVICE_UPDATING,
+      ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED
+    )
+    promise.resolve(isAvailable)
   }
 
   /**
@@ -99,26 +102,21 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   fun prepareIntegrityToken(cloudProjectNumber: String, promise: Promise) {
     try {
       val cpn = cloudProjectNumber.toLong()
-      val standardIntegrityManager =
-        IntegrityManagerFactory.createStandard(reactApplicationContext)
+      val standardIntegrityManager = IntegrityManagerFactory.createStandard(reactApplicationContext)
       standardIntegrityManager.prepareIntegrityToken(
-        StandardIntegrityManager.PrepareIntegrityTokenRequest.builder()
-          .setCloudProjectNumber(cpn)
+        StandardIntegrityManager.PrepareIntegrityTokenRequest.builder().setCloudProjectNumber(cpn)
           .build()
-      )
-        .addOnSuccessListener { res -> integrityTokenProvider = res; promise.resolve(null) }
+      ).addOnSuccessListener { res -> integrityTokenProvider = res; promise.resolve(null) }
         .addOnFailureListener { ex ->
           ModuleException.PREPARE_FAILED.reject(
-            promise,
-            Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
+            promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
           )
         }
     } catch (_: NumberFormatException) {
       ModuleException.WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT.reject(promise)
     } catch (e: Exception) {
       ModuleException.PREPARE_FAILED.reject(
-        promise,
-        Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
+        promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
       )
     }
   }
@@ -138,24 +136,19 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   fun requestIntegrityToken(requestHash: String?, promise: Promise) {
     try {
       val integrityTokenResponse = integrityTokenProvider.request(
-        StandardIntegrityTokenRequest.builder()
-          .setRequestHash(requestHash)
-          .build()
+        StandardIntegrityTokenRequest.builder().setRequestHash(requestHash).build()
       )
-      integrityTokenResponse
-        .addOnSuccessListener { res -> promise.resolve((res.token())) }
+      integrityTokenResponse.addOnSuccessListener { res -> promise.resolve((res.token())) }
         .addOnFailureListener { ex ->
           ModuleException.REQUEST_TOKEN_FAILED.reject(
-            promise,
-            Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
+            promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
           )
         }
     } catch (_: UninitializedPropertyAccessException) {
       ModuleException.PREPARE_NOT_CALLED.reject(promise)
     } catch (e: Exception) {
       ModuleException.REQUEST_TOKEN_FAILED.reject(
-        promise,
-        Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
+        promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
       )
     }
   }
@@ -177,9 +170,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       val keyInfo = factory.getKeySpec(key, KeyInfo::class.java)
       return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         //
-        keyInfo.securityLevel == SECURITY_LEVEL_TRUSTED_ENVIRONMENT
-          || keyInfo.securityLevel == SECURITY_LEVEL_STRONGBOX
-          || keyInfo.securityLevel == SECURITY_LEVEL_UNKNOWN_SECURE
+        keyInfo.securityLevel == SECURITY_LEVEL_TRUSTED_ENVIRONMENT || keyInfo.securityLevel == SECURITY_LEVEL_STRONGBOX || keyInfo.securityLevel == SECURITY_LEVEL_UNKNOWN_SECURE
       } else {
         @Suppress("DEPRECATION") return keyInfo.isInsideSecureHardware
       }
@@ -202,16 +193,11 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    */
   @RequiresApi(Build.VERSION_CODES.N)
   private fun generateAttestationKey(
-    keyAlias: String,
-    challenge: ByteArray,
-    hasStrongBox: Boolean
+    keyAlias: String, challenge: ByteArray, hasStrongBox: Boolean
   ): KeyPair {
-    val builder =
-      KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_SIGN)
-        .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1")) // P-256
-        .setDigests(KeyProperties.DIGEST_SHA256)
-        .setKeySize(256)
-        .setAttestationChallenge(challenge)
+    val builder = KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_SIGN)
+      .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1")) // P-256
+      .setDigests(KeyProperties.DIGEST_SHA256).setKeySize(256).setAttestationChallenge(challenge)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && hasStrongBox) {
       builder.setIsStrongBoxBacked(true)
     }
@@ -248,8 +234,10 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           return@Thread
         }
         val alias = keyAlias ?: "attestationKeyAlias"
-        val hasStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-          reactApplicationContext.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+        val hasStrongBox =
+          Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && reactApplicationContext.packageManager.hasSystemFeature(
+            PackageManager.FEATURE_STRONGBOX_KEYSTORE
+          )
         val keyPair = generateAttestationKey(alias, challenge.toByteArray(), hasStrongBox)
         if (!isKeyHardwareBacked(keyPair.private)) {
           // We check if the key is hardware backed just to be sure exclude software fallback
@@ -269,8 +257,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
         promise.resolve(encodedAttestation)
       } catch (e: Exception) {
         ModuleException.REQUEST_ATTESTATION_FAILED.reject(
-          promise,
-          Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
+          promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
         )
       }
     }.start()
@@ -299,13 +286,15 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     private enum class ModuleException(
       val ex: Exception
     ) {
-      WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT(Exception("WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT")),
-      PREPARE_FAILED(Exception("PREPARE_TOKEN_EXCEPTION")),
-      PREPARE_NOT_CALLED(Exception("PREPARE_NOT_CALLED")),
-      REQUEST_TOKEN_FAILED(Exception("REQUEST_TOKEN_FAILED")),
-      REQUEST_ATTESTATION_FAILED(Exception("REQUEST_ATTESTATION_FAILED")),
-      KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")),
-      UNSUPPORTED_DEVICE(Exception("UNSUPPORTED_DEVICE"));
+      WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT(Exception("WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT")), PREPARE_FAILED(
+        Exception("PREPARE_TOKEN_EXCEPTION")
+      ),
+      PREPARE_NOT_CALLED(Exception("PREPARE_NOT_CALLED")), REQUEST_TOKEN_FAILED(Exception("REQUEST_TOKEN_FAILED")), REQUEST_ATTESTATION_FAILED(
+        Exception("REQUEST_ATTESTATION_FAILED")
+      ),
+      KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")), UNSUPPORTED_DEVICE(
+        Exception("UNSUPPORTED_DEVICE")
+      );
 
       /**
        * Rejects the provided promise with the appropriate error message and additional data.
