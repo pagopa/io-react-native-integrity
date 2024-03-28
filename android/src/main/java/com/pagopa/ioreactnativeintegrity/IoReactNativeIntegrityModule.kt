@@ -185,15 +185,14 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * @returns the generated key pair.
    */
   @RequiresApi(Build.VERSION_CODES.N)
-  private fun generateAttestationKey(keyAlias: String, challenge: ByteArray, useStrongBox: Boolean): KeyPair {
-      val purposes = KeyProperties.PURPOSE_VERIFY
+  private fun generateAttestationKey(keyAlias: String, challenge: ByteArray, hasStrongBox: Boolean): KeyPair {
       val builder =
-        KeyGenParameterSpec.Builder(keyAlias, purposes)
+        KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_SIGN)
           .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1")) // P-256
           .setDigests(KeyProperties.DIGEST_SHA256)
           .setKeySize(256)
           .setAttestationChallenge(challenge)
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && useStrongBox) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && hasStrongBox) {
         builder.setIsStrongBoxBacked(true)
       }
       val keyPairGenerator = KeyPairGenerator.getInstance(
