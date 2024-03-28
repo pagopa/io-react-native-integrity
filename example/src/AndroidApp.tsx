@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, SafeAreaView, Text, ScrollView } from 'react-native';
+import { StyleSheet, SafeAreaView, Text, ScrollView, View } from 'react-native';
 import {
   getAttestation,
   isPlayServicesAvailable,
@@ -142,7 +142,7 @@ export default function AndroidApp() {
     }
   };
 
-return (
+  return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollViewContentContainer}>
         <Text style={styles.h1}>Integrity Check Demo App</Text>
