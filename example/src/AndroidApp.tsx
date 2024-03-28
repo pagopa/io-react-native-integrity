@@ -142,42 +142,49 @@ export default function AndroidApp() {
     }
   };
 
-  return (
+return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.h1}>Integrity Check Demo App</Text>
-      {isServiceAvailable ? (
+      <ScrollView contentContainerStyle={styles.scrollViewContentContainer}>
+        <Text style={styles.h1}>Integrity Check Demo App</Text>
+        {isServiceAvailable ? (
+          <>
+            <Text style={styles.h2}>Play Integrity Standard Request</Text>
+            <ButtonWithLoader
+              title="Prepare"
+              onPress={() => prepare()}
+              loading={isPrepareLoading}
+            />
+            <View style={styles.spacer} />
+            <ButtonWithLoader
+              title="Get token"
+              onPress={() => requestToken()}
+              loading={isRequestTokenLoading}
+            />
+            <View style={styles.spacer} />
+            <ButtonWithLoader
+              title="Verify Token"
+              onPress={() => verifyToken()}
+              loading={isVerifyintegrityTokenLoading}
+            />
+            <View style={styles.spacer} />
+            <Text style={styles.h2}>Key Attestation</Text>
+            <ButtonWithLoader
+              title="Get attestation"
+              onPress={() => requestAttestation()}
+              loading={isGetAttestationLoading}
+            />
+            <View style={styles.spacer} />
+            <ButtonWithLoader
+              title="Verify attestation"
+              onPress={() => verifyAttestation()}
+              loading={isVerifyAttestationLoading}
+            />
+            <View style={styles.spacer} />
+          </>
+        ) : null}
         <>
-          <Text>Play Integrity Standard Request</Text>
-          <ButtonWithLoader
-            title="Prepare"
-            onPress={() => prepare()}
-            loading={isPrepareLoading}
-          />
-          <ButtonWithLoader
-            title="Get token"
-            onPress={() => requestToken()}
-            loading={isRequestTokenLoading}
-          />
-          <ButtonWithLoader
-            title="Verify Token"
-            onPress={() => verifyToken()}
-            loading={isVerifyintegrityTokenLoading}
-          />
-          <Text>Key Attestation</Text>
-          <ButtonWithLoader
-            title="Get attestation"
-            onPress={() => requestAttestation()}
-            loading={isGetAttestationLoading}
-          />
-          <ButtonWithLoader
-            title="Verify attestation"
-            onPress={() => verifyAttestation()}
-            loading={isVerifyAttestationLoading}
-          />
+          <Text>{debugLog}</Text>
         </>
-      ) : null}
-      <ScrollView style={styles.debug}>
-        <Text>{debugLog}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -188,12 +195,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  scrollViewContentContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexGrow: 1,
+    padding: 10,
+  },
   h1: {
     fontWeight: 'bold',
     fontSize: 32,
     textAlign: 'center',
-    marginTop: 50,
-    marginBottom: 50,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  h2: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  spacer: {
+    height: 8,
   },
   debug: {
     width: '100%',
