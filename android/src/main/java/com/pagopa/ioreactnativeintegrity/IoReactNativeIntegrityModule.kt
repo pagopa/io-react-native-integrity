@@ -74,8 +74,9 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * @param promise the React Native promise to be resolved or reject.
    */
   @ReactMethod
-  fun isPlayServicesAvailable (promise: Promise){
-    val result = when (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(reactApplicationContext)) {
+  fun isPlayServicesAvailable(promise: Promise) {
+    val result = when (GoogleApiAvailability.getInstance()
+      .isGooglePlayServicesAvailable(reactApplicationContext)) {
       0, 18, 2 -> true
       else -> false
     }
@@ -106,11 +107,19 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           .build()
       )
         .addOnSuccessListener { res -> integrityTokenProvider = res; promise.resolve(null) }
-        .addOnFailureListener { ex -> ModuleException.PREPARE_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))) }
-    }catch (_: NumberFormatException){
+        .addOnFailureListener { ex ->
+          ModuleException.PREPARE_FAILED.reject(
+            promise,
+            Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
+          )
+        }
+    } catch (_: NumberFormatException) {
       ModuleException.WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT.reject(promise)
-    }catch (e: Exception){
-      ModuleException.PREPARE_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e)))
+    } catch (e: Exception) {
+      ModuleException.PREPARE_FAILED.reject(
+        promise,
+        Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
+      )
     }
   }
 
@@ -135,12 +144,19 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       )
       integrityTokenResponse
         .addOnSuccessListener { res -> promise.resolve((res.token())) }
-        .addOnFailureListener { ex -> ModuleException.REQUEST_TOKEN_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))) }
-    }catch(_: UninitializedPropertyAccessException){
-        ModuleException.PREPARE_NOT_CALLED.reject(promise)
-    }
-    catch (e: Exception){
-      ModuleException.REQUEST_TOKEN_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e)))
+        .addOnFailureListener { ex ->
+          ModuleException.REQUEST_TOKEN_FAILED.reject(
+            promise,
+            Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
+          )
+        }
+    } catch (_: UninitializedPropertyAccessException) {
+      ModuleException.PREPARE_NOT_CALLED.reject(promise)
+    } catch (e: Exception) {
+      ModuleException.REQUEST_TOKEN_FAILED.reject(
+        promise,
+        Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
+      )
     }
   }
 
@@ -185,21 +201,25 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * @returns the generated key pair.
    */
   @RequiresApi(Build.VERSION_CODES.N)
-  private fun generateAttestationKey(keyAlias: String, challenge: ByteArray, hasStrongBox: Boolean): KeyPair {
-      val builder =
-        KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_SIGN)
-          .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1")) // P-256
-          .setDigests(KeyProperties.DIGEST_SHA256)
-          .setKeySize(256)
-          .setAttestationChallenge(challenge)
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && hasStrongBox) {
-        builder.setIsStrongBoxBacked(true)
-      }
-      val keyPairGenerator = KeyPairGenerator.getInstance(
-        KeyProperties.KEY_ALGORITHM_EC, KEYSTORE_PROVIDER
-      )
-      keyPairGenerator.initialize(builder.build())
-      return keyPairGenerator.generateKeyPair()
+  private fun generateAttestationKey(
+    keyAlias: String,
+    challenge: ByteArray,
+    hasStrongBox: Boolean
+  ): KeyPair {
+    val builder =
+      KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_SIGN)
+        .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1")) // P-256
+        .setDigests(KeyProperties.DIGEST_SHA256)
+        .setKeySize(256)
+        .setAttestationChallenge(challenge)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && hasStrongBox) {
+      builder.setIsStrongBoxBacked(true)
+    }
+    val keyPairGenerator = KeyPairGenerator.getInstance(
+      KeyProperties.KEY_ALGORITHM_EC, KEYSTORE_PROVIDER
+    )
+    keyPairGenerator.initialize(builder.build())
+    return keyPairGenerator.generateKeyPair()
   }
 
   /**
@@ -219,9 +239,9 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * @param promise the React Native promise to be resolved or rejected.
    */
   @ReactMethod
-  fun getAttestation(challenge: String, keyAlias: String?, promise: Promise){
+  fun getAttestation(challenge: String, keyAlias: String?, promise: Promise) {
     Thread {
-      try{
+      try {
         // Remove this block if the minSdkVersion is set to 24
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
           ModuleException.UNSUPPORTED_DEVICE.reject(promise)
@@ -231,7 +251,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
         val hasStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
           reactApplicationContext.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
         val keyPair = generateAttestationKey(alias, challenge.toByteArray(), hasStrongBox)
-        if(!isKeyHardwareBacked(keyPair.private)){
+        if (!isKeyHardwareBacked(keyPair.private)) {
           // We check if the key is hardware backed just to be sure exclude software fallback
           ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
           return@Thread
@@ -244,10 +264,14 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           attestations += cert
         }
         val concatenatedAttestations = attestations.joinToString(",")
-        val encodedAttestation = Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
+        val encodedAttestation =
+          Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
         promise.resolve(encodedAttestation)
-      }catch(e: Exception) {
-        ModuleException.REQUEST_ATTESTATION_FAILED.reject(promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e)))
+      } catch (e: Exception) {
+        ModuleException.REQUEST_ATTESTATION_FAILED.reject(
+          promise,
+          Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
+        )
       }
     }.start()
   }
@@ -257,7 +281,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * @param e an exception.
    * @return [e] message field or an empty string otherwise.
    */
-  private fun getExceptionMessageOrEmpty(e: Exception): String{
+  private fun getExceptionMessageOrEmpty(e: Exception): String {
     return e.message ?: ""
   }
 
