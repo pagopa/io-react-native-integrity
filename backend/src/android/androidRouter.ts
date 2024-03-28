@@ -47,11 +47,11 @@ router.post('/verifyIntegrityToken', async (req, res) => {
 });
 
 /**
- * Verifies a Google Play Integrity Token.
- * The check is done for a standard request and the token is decrypted and verified on Google Cloud, not locally.
- * The GOOGLE_APPLICATION_CREDENTIALS and ANDROID_BUNDLE_IDENTIFIER environment variables must be set.
- * @param integrityToken - The integrity token to verify.
- * @returns The result of the integrity token verification.
+ * Verifies a key attestation which is a signed statement from a secure hardware module that attests to the security properties of the module.
+ * On Android it is represented as a chain of X.509 certificates.
+ * See {@link verifyAttestation} for more details.
+ * @param attestation - The key attestation to verify
+ * @returns The result of the chain verification.
  */
 router.post('/verifyAttestation', async (req, res) => {
   console.debug(
