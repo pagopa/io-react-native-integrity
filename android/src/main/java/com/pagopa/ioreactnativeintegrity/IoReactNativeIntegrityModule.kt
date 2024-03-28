@@ -98,7 +98,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   fun prepareIntegrityToken(cloudProjectNumber: String, promise: Promise) {
     try {
       val cpn = cloudProjectNumber.toLong()
-      val standardIntegrityManager: StandardIntegrityManager =
+      val standardIntegrityManager =
         IntegrityManagerFactory.createStandard(reactApplicationContext)
       standardIntegrityManager.prepareIntegrityToken(
         StandardIntegrityManager.PrepareIntegrityTokenRequest.builder()
@@ -128,7 +128,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   @ReactMethod
   fun requestIntegrityToken(requestHash: String?, promise: Promise) {
     try {
-      val integrityTokenResponse: Task<StandardIntegrityToken> = integrityTokenProvider.request(
+      val integrityTokenResponse = integrityTokenProvider.request(
         StandardIntegrityTokenRequest.builder()
           .setRequestHash(requestHash)
           .build()
