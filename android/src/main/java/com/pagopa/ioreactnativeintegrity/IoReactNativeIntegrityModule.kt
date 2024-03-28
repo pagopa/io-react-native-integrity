@@ -18,10 +18,8 @@ import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.WritableNativeMap
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.tasks.Task
 import com.google.android.play.core.integrity.IntegrityManagerFactory
 import com.google.android.play.core.integrity.StandardIntegrityManager
-import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityToken
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenProvider
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenRequest
 import java.security.KeyFactory
@@ -188,7 +186,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * If the key is in secure hardware, and if the secure hardware supports attestation,
    * the certificate will be signed by a chain of certificates rooted at a trustworthy CA key.
    * Otherwise the chain will be rooted at an untrusted certificate.
-   * @param useStrongBox indicates whether or not the key pair will be stored using StrongBox.
+   * @param hasStrongBox indicates whether or not the key pair will be stored using StrongBox.
    * @returns the generated key pair.
    */
   @RequiresApi(Build.VERSION_CODES.N)
