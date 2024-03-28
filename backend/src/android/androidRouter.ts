@@ -1,5 +1,6 @@
 import express, { Router } from 'express';
 import { verifyAttestation, verifyIntegrityToken } from './androidIntegrity';
+import { ANDROID_BUNDLE_IDENTIFIER, GOOGLE_APPLICATION_CREDENTIALS } from '..';
 
 const router: Router = express.Router();
 
@@ -14,9 +15,6 @@ router.post('/verifyIntegrityToken', async (req, res) => {
   console.debug(
     `Play integrity verdict was requested: ${JSON.stringify(req.body, null, 2)}`
   );
-  const GOOGLE_APPLICATION_CREDENTIALS =
-    process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  const ANDROID_BUNDLE_IDENTIFIER = process.env.ANDROID_BUNDLE_IDENTIFIER;
   if (!GOOGLE_APPLICATION_CREDENTIALS || !ANDROID_BUNDLE_IDENTIFIER) {
     res.status(500).send({
       error:
