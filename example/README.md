@@ -48,11 +48,11 @@ In order to run the app, you need to create a `.env` file by copying the `.env.l
 $ cp .env.local .env
 ```
 
-> [!IMPORTANT]  
-> When changing the `.env` file, make sure to clear the Metro bundler cache by running `yarn start --reset-cache`.
-
 For the Google Play Integrity API calls, you need to update the `GOOGLE_CLOUD_PROJECT_NUMBER` value. This requires a Google Cloud project with the Play Integrity API enabled. Follow the official
 documentation provided by Google [here](https://developer.android.com/google/play/integrity/setup).
+
+> [!IMPORTANT]  
+> When changing the `.env` file, make sure to clear the Metro bundler cache by running `yarn start --reset-cache`.
 
 ## Local server
 
