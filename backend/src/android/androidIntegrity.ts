@@ -15,8 +15,11 @@ type CRL = {
   >;
 };
 
+// Certificate Revocation status List
+// https://developer.android.com/privacy-and-security/security-key-attestation#certificate_status
 const CRL_URL = 'https://android.googleapis.com/attestation/status';
-
+// Key attestation extension data schema OID
+// https://developer.android.com/privacy-and-security/security-key-attestation#key_attestation_ext_schema
 const KEY_OID = '1.3.6.1.4.1.11129.2.1.17';
 
 export const playintegrity = google.playintegrity('v1');
