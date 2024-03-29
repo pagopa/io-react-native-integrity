@@ -252,7 +252,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           val chain = it.getCertificateChain(alias)
           // The certificate chain consists of an array of certificates, thus we concat them into a string
           var attestations = arrayOf<String>()
-          chain?.forEachIndexed { _, certificate ->
+          chain.forEachIndexed { _, certificate ->
             val cert = Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
             attestations += cert
           }
