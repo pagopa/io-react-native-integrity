@@ -146,8 +146,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
         addOnSuccessListener { res -> promise.resolve((res.token())) }
         addOnFailureListener { ex ->
           ModuleException.REQUEST_TOKEN_FAILED.reject(
-            promise,
-            Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
+            promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(ex))
           )
         }
       } ?: ModuleException.PREPARE_NOT_CALLED.reject(promise)
@@ -249,17 +248,21 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
           return@Thread
         }
-        val chain = keyStore?.getCertificateChain(alias)
-        // The certificate chain consists of an array of certificates, thus we concat them into a string
-        var attestations = arrayOf<String>()
-        chain?.forEachIndexed { _, certificate ->
-          val cert = Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
-          attestations += cert
-        }
-        val concatenatedAttestations = attestations.joinToString(",")
-        val encodedAttestation =
-          Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
-        promise.resolve(encodedAttestation)
+        keyStore?.let {
+          val chain = it.getCertificateChain(alias)
+          // The certificate chain consists of an array of certificates, thus we concat them into a string
+          var attestations = arrayOf<String>()
+          chain?.forEachIndexed { _, certificate ->
+            val cert = Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
+            attestations += cert
+          }
+          val concatenatedAttestations = attestations.joinToString(",")
+          val encodedAttestation =
+            Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
+          promise.resolve(encodedAttestation)
+        } ?: ModuleException.KEYSTORE_NOT_INITIALIZED.reject(
+          promise
+        )
       } catch (e: Exception) {
         ModuleException.REQUEST_ATTESTATION_FAILED.reject(
           promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
@@ -299,7 +302,8 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       ),
       KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")), UNSUPPORTED_DEVICE(
         Exception("UNSUPPORTED_DEVICE")
-      );
+      ),
+      KEYSTORE_NOT_INITIALIZED(Exception("KEYSTORE_NOT_INITIALIZED"));
 
       /**
        * Rejects the provided promise with the appropriate error message and additional data.

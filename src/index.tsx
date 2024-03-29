@@ -11,7 +11,8 @@ type IntegrityErrorCodesAndroid =
   | 'REQUEST_TOKEN_FAILED'
   | 'REQUEST_ATTESTATION_FAILED'
   | 'KEY_IS_NOT_HARDWARE_BACKED'
-  | 'UNSUPPORTED_DEVICE';
+  | 'UNSUPPORTED_DEVICE'
+  | 'KEYSTORE_NOT_INITIALIZED';
 
 /**
  * Error codes returned by the iOS module.
