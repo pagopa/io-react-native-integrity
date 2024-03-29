@@ -39,13 +39,19 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
 
   private var integrityTokenProvider: StandardIntegrityTokenProvider? = null
 
-  private val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER)
-
   /**
-   * Constructor which initializes the keystore engine.
+   * Lazily initialize the keystore manager only when the variable is called,
+   * otherwise it won't be created. Once created the same object will be used during
+   * its lifecycle.
    */
-  init {
-    keyStore.load(null)
+  private val keyStore: KeyStore? by lazy {
+    try {
+      KeyStore.getInstance(KEYSTORE_PROVIDER).also {
+        it.load(null)
+      }
+    } catch (e: Exception) {
+      null
+    }
   }
 
   /**
@@ -243,10 +249,10 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
           return@Thread
         }
-        val chain = keyStore.getCertificateChain(alias)
+        val chain = keyStore?.getCertificateChain(alias)
         // The certificate chain consists of an array of certificates, thus we concat them into a string
         var attestations = arrayOf<String>()
-        chain.forEachIndexed { _, certificate ->
+        chain?.forEachIndexed { _, certificate ->
           val cert = Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
           attestations += cert
         }
