@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 const port = process.env.PORT || 3000;
-const nonce = uuid();
+let nonce = uuid();
 
 // Please note that this is a simple example and the attestation should be stored in a secure way.
 // Every time the server restarts, the attestation is lost. Every time the app verify the attestation
@@ -29,6 +29,7 @@ const TEAM_IDENTIFIER = process.env.TEAM_IDENTIFIER || '';
  * The client then sends the nonce back to the server as part of the attestation process.
  */
 app.get('/attest/nonce', (_, res) => {
+  nonce = uuid();
   console.debug(`challange was requested, returning ${nonce}`);
   res.send(JSON.stringify({ nonce }));
 });

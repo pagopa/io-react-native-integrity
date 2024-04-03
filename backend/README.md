@@ -28,6 +28,6 @@ $ yarn install
 
 ```bash
 # First edit .env to add a BACKEND_ADDRESS (is required to use real local ip address instead localhost)
-$ cp .env.local env.local
+$ cp .env.local .env
 $ yarn start
 ```
