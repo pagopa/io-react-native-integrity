@@ -20,11 +20,12 @@ class IoReactNativeIntegrity: NSObject {
       return
     }
     
-    if DCAppAttestService.shared.isSupported {
-      resolve(true)
-    } else {
+    guard DCAppAttestService.shared.isSupported else {
       ME.unsupportedService.reject(reject: reject)
+      return
     }
+    
+    resolve(true)
   }
   
   /// Generates a hardware key using the DeviceCheck App Attestation Service.
@@ -42,22 +43,24 @@ class IoReactNativeIntegrity: NSObject {
       return
     }
     
-    if DCAppAttestService.shared.isSupported {
-      let service = DCAppAttestService.shared
-      
-      service.generateKey { hardwareKeyTag, error in
-        
-        guard error == nil else {
-          ME.generationKeyFailed.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
-          return
-        }
-        
-        resolve(hardwareKeyTag)
-        
-      }
-    } else {
-      ME.unsupportedService.reject(reject: reject);
+    guard DCAppAttestService.shared.isSupported else {
+      ME.unsupportedService.reject(reject: reject)
+      return
     }
+    
+    let service = DCAppAttestService.shared
+    
+    service.generateKey { hardwareKeyTag, error in
+      
+      guard error == nil else {
+        ME.generationKeyFailed.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
+        return
+      }
+      
+      resolve(hardwareKeyTag)
+      
+    }
+    
   }
   
   /// Requests an attestation of the hardware key for a given challenge.
@@ -79,31 +82,33 @@ class IoReactNativeIntegrity: NSObject {
       return
     }
     
-    if DCAppAttestService.shared.isSupported {
-      let service = DCAppAttestService.shared
+    guard DCAppAttestService.shared.isSupported else {
+      ME.unsupportedService.reject(reject: reject)
+      return
+    }
+    
+    let service = DCAppAttestService.shared
+    
+    // Safely encode the challenge string to data and generate a hash.
+    guard let challengeData = challenge.data(using: .utf8) else {
+      ME.challengeError.reject(reject: reject)
+      return
+    }
+    let hash = Data(SHA256.hash(data: challengeData))
+    
+    // Request attestation with the generated hash and handle the response
+    service.attestKey(hardwareKeyTag, clientDataHash: hash) {attestation, error in
       
-      // Safely encode the challenge string to data and generate a hash.
-      guard let challengeData = challenge.data(using: .utf8) else {
-        ME.challengeError.reject(reject: reject)
+      guard error == nil else {
+        ME.attestationError.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
         return
       }
-      let hash = Data(SHA256.hash(data: challengeData))
       
-      // Request attestation with the generated hash and handle the response
-      service.attestKey(hardwareKeyTag, clientDataHash: hash) {attestation, error in
-        
-        guard error == nil else {
-          ME.attestationError.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
-          return
-        }
-        
-        let encodedAttestation = attestation?.base64EncodedString()
-        resolve(encodedAttestation)
-      }
-      
-    } else {
-      ME.unsupportedService.reject(reject: reject)
+      let encodedAttestation = attestation?.base64EncodedString()
+      resolve(encodedAttestation)
     }
+    
+    
   }
   
   /// Requests an hardwareSignature with assertion for a given clientData and hardwareKeyTag.
@@ -125,30 +130,31 @@ class IoReactNativeIntegrity: NSObject {
       return
     }
     
-    if DCAppAttestService.shared.isSupported {
-      let service = DCAppAttestService.shared
+    guard DCAppAttestService.shared.isSupported else {
+      ME.unsupportedService.reject(reject: reject)
+      return
+    }
+    
+    let service = DCAppAttestService.shared
+    
+    // Safely encode the clientData string to data and generate a hash.
+    guard let encodedClientData = clientData.data(using: .utf8) else {
+      ME.clientDataEncodingError.reject(reject: reject)
+      return
+    }
+    
+    let clientDataHash = Data(SHA256.hash(data: encodedClientData))
+    
+    service.generateAssertion(hardwareKeyTag, clientDataHash: clientDataHash) { assertion, error in
       
-      // Safely encode the clientData string to data and generate a hash.
-      guard let encodedClientData = clientData.data(using: .utf8) else {
-        ME.clientDataEncodingError.reject(reject: reject)
+      guard error == nil else {
+        ME.generationAssertionFailed.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
         return
       }
       
-      let clientDataHash = Data(SHA256.hash(data: encodedClientData))
+      let encodedAssertion = assertion?.base64EncodedString()
+      resolve(encodedAssertion)
       
-      service.generateAssertion(hardwareKeyTag, clientDataHash: clientDataHash) { assertion, error in
-        
-        guard error == nil else {
-          ME.generationAssertionFailed.reject(reject: reject, ("error", error?.localizedDescription ?? ""))
-          return
-        }
-        
-        let encodedAssertion = assertion?.base64EncodedString()
-        resolve(encodedAssertion)
-        
-      }
-    } else {
-      ME.unsupportedService.reject(reject: reject)
     }
   }
   
