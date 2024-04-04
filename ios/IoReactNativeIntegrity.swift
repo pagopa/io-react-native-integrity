@@ -58,9 +58,7 @@ class IoReactNativeIntegrity: NSObject {
       }
       
       resolve(hardwareKeyTag)
-      
     }
-    
   }
   
   /// Requests an attestation of the hardware key for a given challenge.
@@ -107,8 +105,6 @@ class IoReactNativeIntegrity: NSObject {
       let encodedAttestation = attestation?.base64EncodedString()
       resolve(encodedAttestation)
     }
-    
-    
   }
   
   /// Requests an hardwareSignature with assertion for a given clientData and hardwareKeyTag.
@@ -154,7 +150,6 @@ class IoReactNativeIntegrity: NSObject {
       
       let encodedAssertion = assertion?.base64EncodedString()
       resolve(encodedAssertion)
-      
     }
   }
   
