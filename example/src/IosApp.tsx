@@ -46,14 +46,22 @@ export default function App() {
   }, []);
 
   const getHardwareKey = async () => {
-    if (hardwareKeyTag === '' || hardwareKeyTag === undefined) {
-      setHardwareKeyTag(undefined);
-      const hardwareKey = await generateHardwareKey();
-      setHardwareKeyTag(hardwareKey);
-      setDebugLog(hardwareKey);
-    } else {
-      setDebugLog(hardwareKeyTag);
-    }
+    setHardwareKeyTag(undefined);
+    const hardwareKey = await generateHardwareKey();
+    setHardwareKeyTag(hardwareKey);
+    setDebugLog(hardwareKey);
+  };
+
+  const postRequest = async (endpoint: string, body: object) => {
+    const response = await fetch(`${BACKEND_ADDRESS}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    return response;
   };
 
   const getChallengeFromServer = async () => {
@@ -62,10 +70,8 @@ export default function App() {
     try {
       const response = await fetch(`${BACKEND_ADDRESS}/attest/nonce`);
       const result = await response.json();
-      console.log(result);
       return result.nonce;
-    } catch (error) {
-      console.error(error);
+    } catch {
       return '';
     }
   };
@@ -76,26 +82,25 @@ export default function App() {
       // get challenge from server
       const nonce = await getChallengeFromServer();
       setChallenge(nonce);
-      const result = await getAttestation(nonce, hardwareKeyTag);
-      setAttestation(result);
-      setDebugLog(result);
+      getAttestation(nonce, hardwareKeyTag)
+        .then((result) => {
+          setAttestation(result);
+          setDebugLog(result);
+        })
+        .catch((error: IntegrityError) => {
+          setDebugLog(error.message + ':' + JSON.stringify(error.userInfo));
+          setAttestation('');
+        });
     }
   };
 
   const verifyAttestation = async () => {
     // verify attestation on the server with POST
     // and body of challenge, attestation and keyId
-    const result = await fetch(`${BACKEND_ADDRESS}/attest/verify`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        challenge: challenge,
-        attestation: attestation,
-        hardwareKeyTag: hardwareKeyTag,
-      }),
+    const result = await postRequest('attest/verify', {
+      challenge: challenge,
+      attestation: attestation,
+      hardwareKeyTag: hardwareKeyTag,
     });
     const response = await result.json();
     setDebugLog(JSON.stringify(response));
@@ -104,18 +109,12 @@ export default function App() {
   const verifyAssertion = async () => {
     // verify attestation on the server with POST
     // and body of challenge, attestation and keyId
-    const result = await fetch(`${BACKEND_ADDRESS}/assertion/verify`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        challenge: challenge,
-        assertion: assertion,
-        hardwareKeyTag: hardwareKeyTag,
-        payload: JSON.stringify({ challenge: challenge, jwk: jwk }),
-      }),
+
+    const result = await postRequest('assertion/verify', {
+      challenge: challenge,
+      assertion: assertion,
+      hardwareKeyTag: hardwareKeyTag,
+      payload: JSON.stringify({ challenge: challenge, jwk: jwk }),
     });
     const response = await result.json();
     setDebugLog(JSON.stringify(response));
@@ -172,7 +171,9 @@ export default function App() {
             loading={false}
           />
         </>
-      ) : null}
+      ) : (
+        <Text style={styles.h2}>{'Attestation Service is not available'}</Text>
+      )}
       <ScrollView style={styles.debug}>
         <Text style={styles.h2}>{debugLog}</Text>
       </ScrollView>
@@ -183,23 +184,27 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   h1: {
-    fontSize: 20,
     fontWeight: 'bold',
-    margin: 20,
+    fontSize: 32,
+    textAlign: 'center',
+    marginTop: 50,
+    marginBottom: 50,
   },
   h2: {
-    fontSize: 18,
     fontWeight: 'bold',
-    margin: 10,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 50,
+    marginBottom: 50,
   },
   debug: {
-    flex: 1,
     width: '100%',
-    padding: 20,
+    height: 300,
+    position: 'absolute',
+    bottom: 0,
+    backgroundColor: '#eaeaea',
   },
 });

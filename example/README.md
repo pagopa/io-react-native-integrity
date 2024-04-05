@@ -7,7 +7,7 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 ## NodeJS and Ruby
 
 To run the project you need to install the correct version of NodeJS and Ruby.
-We recommend the use of a virtual environment of your choice. For ease of use, this guide adopts [nodenv](https://github.com/nodenv/nodenv) for NodeJS, [rbenv](https://github.com/rbenv/rbenv) for Ruby.
+We recommend the use of a virtual environment of your choice. For ease of use, this guide uses [nodenv](https://github.com/nodenv/nodenv) for NodeJS, [rbenv](https://github.com/rbenv/rbenv) for Ruby.
 
 The node version used in this project is stored in [.node-version](.node-version),
 while the version of Ruby is stored in [.ruby-version](.ruby-version).
