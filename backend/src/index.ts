@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import verifyAttestation from './verifyAttestation';
 import bodyParser from 'body-parser';
 import verifyAssertion from './verifyAssertion';
+import androidRouter from './android/androidRouter';
 
 dotenv.config();
 const app = express();
@@ -21,6 +22,15 @@ let attestation: any = null;
 // The bundle identifier and team identifier are used to verify the attestation and assertion.
 const BUNDLE_IDENTIFIER = process.env.BUNDLE_IDENTIFIER || '';
 const TEAM_IDENTIFIER = process.env.TEAM_IDENTIFIER || '';
+export const GOOGLE_APPLICATION_CREDENTIALS =
+  process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
+export const ANDROID_BUNDLE_IDENTIFIER =
+  process.env.ANDROID_BUNDLE_IDENTIFIER || '';
+
+/**
+ * Router for the android specific endpoints.
+ */
+app.use('/android', androidRouter);
 
 /**
  * This endpoint is used to get the nonce for the attestation process.
@@ -110,5 +120,23 @@ app.post(`/assertion/verify`, (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
+  console.log(`[server] server is running at http://localhost:${port}`);
+  // Check if the environment variables are set, if not, a warning is displayed.
+  if (!GOOGLE_APPLICATION_CREDENTIALS)
+    console.warn('[server] GOOGLE_APPLICATION_CREDENTIALS is not set in .env');
+  else {
+    try {
+      JSON.parse(GOOGLE_APPLICATION_CREDENTIALS);
+    } catch (error) {
+      console.warn(
+        '[server] GOOGLE_APPLICATION_CREDENTIALS is not a valid JSON in .env'
+      );
+    }
+  }
+  if (!ANDROID_BUNDLE_IDENTIFIER)
+    console.warn('[server] ANDROID_BUNDLE_IDENTIFIER is not set in .env');
+  if (!BUNDLE_IDENTIFIER)
+    console.warn('[server] BUNDLE_IDENTIFIER is not set in .env');
+  if (!TEAM_IDENTIFIER)
+    console.warn('[server] TEAM_IDENTIFIER is not set in .env');
 });

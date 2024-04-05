@@ -1,6 +1,20 @@
 import { NativeModules, Platform } from 'react-native';
 
 /**
+ * ANDROID ONLY
+ * Error codes returned by the Android module.
+ */
+type IntegrityErrorCodesAndroid =
+  | 'WRONG_GOOGLE_CLOUD_PROJECT_NUMBER_FORMAT'
+  | 'PREPARE_FAILED'
+  | 'PREPARE_NOT_CALLED'
+  | 'REQUEST_TOKEN_FAILED'
+  | 'REQUEST_ATTESTATION_FAILED'
+  | 'KEY_IS_NOT_HARDWARE_BACKED'
+  | 'UNSUPPORTED_DEVICE'
+  | 'KEYSTORE_NOT_INITIALIZED';
+
+/**
  * Error codes returned by the iOS module.
  */
 type IntegrityErrorCodesIOS =
@@ -12,7 +26,9 @@ type IntegrityErrorCodesIOS =
   | 'CLIENT_DATA_ENCODING_ERROR'
   | 'GENERATION_ASSERTION_FAILED';
 
-export type IntegrityErrorCodes = IntegrityErrorCodesIOS;
+export type IntegrityErrorCodes =
+  | IntegrityErrorCodesIOS
+  | IntegrityErrorCodesAndroid;
 
 /**
  * Error type returned by a rejected promise.
@@ -103,4 +119,66 @@ export function generateHardwareSignatureWithAssertion(
     clientData,
     hardwareKeyTag
   );
+}
+
+/**
+ * Checks whether the current platform is Android or not.
+ * @returns true if the current platform is Android, false otherwise.
+ */
+const isAndroid = () => Platform.OS === 'android';
+
+/**
+ * Error message for functions available only on Android.
+ */
+const NOT_ANDROID_ERROR = 'This function is available only on Android';
+
+/**
+ * ANDROID ONLY
+ * Checks whether Google Play Services is available on the device or not.
+ * @return a promise resolved to true if Google Play Services is available, to false otherwise.
+ */
+export function isPlayServicesAvailable(): Promise<boolean> {
+  return isAndroid()
+    ? IoReactNativeIntegrity.isPlayServicesAvailable()
+    : Promise.resolve(false);
+}
+
+/**
+ * ANDROID ONLY
+ * Preparation step for a [Play Integrity standard API request](https://developer.android.com/google/play/integrity/standard).
+ * It prepares the integrity token provider before obtaining the integrity verdict.
+ * It should be called well before the moment an integrity verdict is needed, for example
+ * when starting the application. It can also be called time to time to refresh it.
+ * it gets rejected when:
+ * - The preparation fails;
+ * - The provided [cloudProjectNumber] format is incorrect.
+ * @param cloudProjectNumber a Google Cloud project number which is supposed to be composed only by numbers.
+ * @return a resolved promise when the preparation is successful, rejected otherwise when:
+ * - The preparation fails or;
+ * - The provided cloudProjectNumber format is incorrect.
+ */
+export function prepareIntegrityToken(
+  cloudProjectNumber: string
+): Promise<void> {
+  return isAndroid()
+    ? IoReactNativeIntegrity.prepareIntegrityToken(cloudProjectNumber)
+    : Promise.reject(NOT_ANDROID_ERROR);
+}
+
+/**
+ * ANDROID ONLY
+ * Integrity token request step for a [Play Integrity standard API request](https://developer.android.com/google/play/integrity/standard).
+ * It requests an integrity token which is then attached to the request to be protected.
+ * It should be called AFTER {@link prepareIntegrityToken} has been called and resolved successfully.
+ * The React Native
+ * @param requestHash a digest of all relevant request parameters (e.g. SHA256) from the user action or server request that is happening.
+ * The max size of this field is 500 bytes. Do not put sensitive information as plain text in this field.
+ * @returns a resolved promise with with the token as payload, rejected otherwise when:
+ * - The integrity token request fails;
+ * - The {@link prepareIntegrityToken} function hasn't been called previously.
+ */
+export function requestIntegrityToken(requestHash?: string): Promise<string> {
+  return isAndroid()
+    ? IoReactNativeIntegrity.requestIntegrityToken(requestHash)
+    : Promise.reject(NOT_ANDROID_ERROR);
 }
