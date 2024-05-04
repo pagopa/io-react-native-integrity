@@ -53,6 +53,7 @@ export default function App() {
   };
 
   const postRequest = async (endpoint: string, body: object) => {
+    console.log(BACKEND_ADDRESS);
     const response = await fetch(`${BACKEND_ADDRESS}/${endpoint}`, {
       method: 'POST',
       headers: {
