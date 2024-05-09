@@ -77,6 +77,7 @@ PODS:
     - glog
     - RCT-Folly (= 2022.05.16.00)
     - React-Core
+    - SwiftCBOR
   - RCT-Folly (2022.05.16.00):
     - boost
     - DoubleConversion
@@ -1118,6 +1119,7 @@ PODS:
   - RNSha256 (1.4.10):
     - React-Core
   - SocketRocket (0.6.1)
+  - SwiftCBOR (0.4.7)
   - Yoga (1.14.0)
 
 DEPENDENCIES:
@@ -1212,6 +1214,7 @@ SPEC REPOS:
     - libevent
     - OpenSSL-Universal
     - SocketRocket
+    - SwiftCBOR
 
 EXTERNAL SOURCES:
   boost:
@@ -1335,7 +1338,7 @@ SPEC CHECKSUMS:
   hermes-engine: 9cecf9953a681df7556b8cc9c74905de8f3293c0
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
   OpenSSL-Universal: ebc357f1e6bc71fa463ccb2fe676756aff50e88c
-  pagopa-io-react-native-integrity: dc1de6afe65dc17df6974a5bdfa68cf354a0b5a5
+  pagopa-io-react-native-integrity: 08fadabd6e676e1108a2e2ac0c633ba5cb67f150
   RCT-Folly: 7169b2b1c44399c76a47b5deaaba715eeeb476c0
   RCTRequired: ca1d7414aba0b27efcfa2ccd37637edb1ab77d96
   RCTTypeSafety: 678e344fb976ff98343ca61dc62e151f3a042292
@@ -1379,8 +1382,9 @@ SPEC CHECKSUMS:
   ReactCommon: 2aa35648354bd4c4665b9a5084a7d37097b89c10
   RNSha256: e1bc64e9e50b293d5282bb4caa1b2043931f1c9d
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
+  SwiftCBOR: 465775bed0e8bac7bfb8160bcf7b95d7f75971e4
   Yoga: 805bf71192903b20fc14babe48080582fee65a80
 
 PODFILE CHECKSUM: fd9c38ef526dee311429a7a1ecc7347bb228ae7f
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.14.3

@@ -24,7 +24,8 @@ type IntegrityErrorCodesIOS =
   | 'UNSUPPORTED_IOS_VERSION'
   | 'CHALLANGE_ERROR'
   | 'CLIENT_DATA_ENCODING_ERROR'
-  | 'GENERATION_ASSERTION_FAILED';
+  | 'GENERATION_ASSERTION_FAILED'
+  | 'DECODING_ASSERTION_FAILED';
 
 export type IntegrityErrorCodes =
   | IntegrityErrorCodesIOS
@@ -119,6 +120,19 @@ export function generateHardwareSignatureWithAssertion(
     clientData,
     hardwareKeyTag
   );
+}
+
+/**
+ * This function decodes a CBOR encoded iOS assertion.
+ *
+ * If it is not possible to decode the assertion, the promise is rejected providing an
+ * instance of {@link IntegrityError}.
+ *
+ * @param assertion - the CBOR assertion to be decoded
+ * @returns - a promise that resolves to a string.
+ */
+export function decodeAssertion(assertion: string): Promise<string> {
+  return IoReactNativeIntegrity.decodeAssertion(assertion);
 }
 
 /**
