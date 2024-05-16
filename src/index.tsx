@@ -86,6 +86,7 @@ export function isAttestationServiceAvailable(): Promise<boolean> {
 }
 
 /**
+ * iOS ONLY
  * This function generates a hardware key that can be used into the attestation process.
  *
  * If it is not possible to retrive the key, the promise is rejected providing an
@@ -96,7 +97,6 @@ export function isAttestationServiceAvailable(): Promise<boolean> {
 export function generateHardwareKey(): Promise<string> {
   return Platform.select({
     ios: () => IoReactNativeIntegrity.generateHardwareKey(),
-    android: () => Promise.reject(IntegrityErrorUnsupportedError),
     default: () => Promise.reject(IntegrityErrorUnsupportedError),
   })();
 }
@@ -118,6 +118,8 @@ export function getAttestation(
 ): Promise<string> {
   return Platform.select({
     ios: () => IoReactNativeIntegrity.getAttestation(challenge, hardwareKeyTag),
+    android: () =>
+      IoReactNativeIntegrity.getAttestation(challenge, hardwareKeyTag),
     default: () => Promise.reject(IntegrityErrorUnsupportedError),
   })();
 }
