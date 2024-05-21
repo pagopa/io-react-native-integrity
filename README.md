@@ -1,13 +1,13 @@
-# io-react-native-integrity
+# @pagopa/io-react-native-integrity
 
 React Native interfaces for managing secure storage in iOS and Android.
 
 ## Installation
 
 ```sh
-npm install io-react-native-integrity
+npm install @pagopa/io-react-native-integrity
 # or
-yarn add io-react-native-integrity
+yarn add @pagopa/io-react-native-integrity
 ```
 
 ## Android
