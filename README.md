@@ -1,5 +1,9 @@
 # @pagopa/io-react-native-integrity
 
+![CI workflow](https://github.com/pagopa/io-react-native-integrity/actions/workflows/ci.yml/badge.svg)
+![Publish workflow](https://github.com/pagopa/io-react-native-integrity/actions/workflows/publish.yml/badge.svg)
+![Code QL workflow](https://github.com/pagopa/io-react-native-integrity/actions/workflows/github-code-scanning/codeql/badge.svg)
+
 React Native interfaces for managing secure storage in iOS and Android.
 
 ## Installation
