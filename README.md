@@ -25,24 +25,6 @@ A (Key Attestation)[https://developer.android.com/privacy-and-security/security-
 During key attestation, a key pair is generated along with its certificate chain hich can be used to verify the properties of that key pair.
 If the device supports hardware-level key attestation, the root certificate of the chain is signed using an attestation root key protected by the device's hardware-backed keystore.
 
-### `isPlayServicesAvailable`
-
-Returns a boolean value indicating whether the Play Services are available on the device or not.
-
-```ts
-try {
-  const isServiceAvailable = await isPlayServicesAvailable();
-  if (isServiceAvailable) {
-    // Proceed with the following steps
-  } else {
-    // Return an error message
-  }
-} catch (e) {
-  const error = e as IntegrityError;
-  setStatus(`Error: ${error.message}`);
-  console.log(JSON.stringify(e));
-}
-```
 
 ### `isPlayServicesAvailable`
 
