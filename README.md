@@ -77,7 +77,7 @@ try {
 
 ### `getAttestation`
 
-Returns a (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation] which can later be verified by the backend server.
+Returns a [Key Attestation](https://developer.android.com/privacy-and-security/security-key-attestation) which can later be verified by the backend server.
 
 ```ts
 try {
@@ -91,7 +91,7 @@ try {
 
 ## iOS
 
-The iOS implementation is based on the (DCAppAttestService)[https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity] which is availabe from iOS 14.0 onwards.
+The iOS implementation is based on the [DCAppAttestService](https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity) which is availabe from iOS 14.0 onwards.
 It's a framework provided by Apple for iOS that allows apps to verify if a specific device has been used to perform a particular action, without revealing the identity of the device itself or its owner. It is useful for preventing abuse by users who try to manipulate the system or use the app fraudulently.
 This implementation doesn't relay on any remote service.
 
