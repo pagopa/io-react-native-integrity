@@ -27,9 +27,12 @@ type IntegrityErrorCodesIOS =
   | 'GENERATION_ASSERTION_FAILED'
   | 'DECODING_ASSERTION_FAILED';
 
+type IntegrityErrorCodesCommon = 'PLATFORM_NOT_SUPPORTED';
+
 export type IntegrityErrorCodes =
   | IntegrityErrorCodesIOS
-  | IntegrityErrorCodesAndroid;
+  | IntegrityErrorCodesAndroid
+  | IntegrityErrorCodesCommon;
 
 /**
  * Error type returned by a rejected promise.
@@ -40,6 +43,14 @@ export type IntegrityErrorCodes =
 export type IntegrityError = {
   message: IntegrityErrorCodes;
   userInfo: Record<string, string>;
+};
+
+/**
+ * Error when the platform is not supported.
+ */
+const IntegrityErrorUnsupportedError: IntegrityError = {
+  message: 'PLATFORM_NOT_SUPPORTED',
+  userInfo: {},
 };
 
 const LINKING_ERROR =
@@ -60,6 +71,7 @@ const IoReactNativeIntegrity = NativeModules.IoReactNativeIntegrity
     );
 
 /**
+ * iOS ONLY
  * This function checks if the attestation service is available on the device.
  *
  * If it is not possible to retrive the key, the promise is rejected providing an
@@ -68,12 +80,14 @@ const IoReactNativeIntegrity = NativeModules.IoReactNativeIntegrity
  * @returns a promise that resolves to a boolean.
  */
 export function isAttestationServiceAvailable(): Promise<boolean> {
-  return Platform.OS === 'ios'
-    ? IoReactNativeIntegrity.isAttestationServiceAvailable()
-    : Promise.resolve(false); // TODO: implement for Android
+  return Platform.select({
+    ios: () => IoReactNativeIntegrity.isAttestationServiceAvailable(),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
 }
 
 /**
+ * iOS ONLY
  * This function generates a hardware key that can be used into the attestation process.
  *
  * If it is not possible to retrive the key, the promise is rejected providing an
@@ -82,10 +96,14 @@ export function isAttestationServiceAvailable(): Promise<boolean> {
  * @returns a promise that resolves to a string.
  */
 export function generateHardwareKey(): Promise<string> {
-  return IoReactNativeIntegrity.generateHardwareKey();
+  return Platform.select({
+    ios: () => IoReactNativeIntegrity.generateHardwareKey(),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
 }
 
 /**
+ * iOS ONLY
  * This function generates an attestation for the given challenge and hardware key.
  *
  * If it is not possible to retrive the attestation, the promise is rejected providing an
@@ -99,10 +117,16 @@ export function getAttestation(
   challenge: string,
   hardwareKeyTag: string
 ): Promise<string> {
-  return IoReactNativeIntegrity.getAttestation(challenge, hardwareKeyTag);
+  return Platform.select({
+    ios: () => IoReactNativeIntegrity.getAttestation(challenge, hardwareKeyTag),
+    android: () =>
+      IoReactNativeIntegrity.getAttestation(challenge, hardwareKeyTag),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
 }
 
 /**
+ * iOS ONLY
  * This function generates a signature for the given client data given an hardware key.
  *
  * If it is not possible to retrive the signature, the promise is rejected providing an
@@ -116,10 +140,14 @@ export function generateHardwareSignatureWithAssertion(
   clientData: string,
   hardwareKeyTag: string
 ): Promise<string> {
-  return IoReactNativeIntegrity.generateHardwareSignatureWithAssertion(
-    clientData,
-    hardwareKeyTag
-  );
+  return Platform.select({
+    ios: () =>
+      IoReactNativeIntegrity.generateHardwareSignatureWithAssertion(
+        clientData,
+        hardwareKeyTag
+      ),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
 }
 
 /**
@@ -136,25 +164,15 @@ export function decodeAssertion(assertion: string): Promise<string> {
 }
 
 /**
- * Checks whether the current platform is Android or not.
- * @returns true if the current platform is Android, false otherwise.
- */
-const isAndroid = () => Platform.OS === 'android';
-
-/**
- * Error message for functions available only on Android.
- */
-const NOT_ANDROID_ERROR = 'This function is available only on Android';
-
-/**
  * ANDROID ONLY
  * Checks whether Google Play Services is available on the device or not.
  * @return a promise resolved to true if Google Play Services is available, to false otherwise.
  */
 export function isPlayServicesAvailable(): Promise<boolean> {
-  return isAndroid()
-    ? IoReactNativeIntegrity.isPlayServicesAvailable()
-    : Promise.resolve(false);
+  return Platform.select({
+    android: () => IoReactNativeIntegrity.isPlayServicesAvailable(),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
 }
 
 /**
@@ -174,9 +192,11 @@ export function isPlayServicesAvailable(): Promise<boolean> {
 export function prepareIntegrityToken(
   cloudProjectNumber: string
 ): Promise<void> {
-  return isAndroid()
-    ? IoReactNativeIntegrity.prepareIntegrityToken(cloudProjectNumber)
-    : Promise.reject(NOT_ANDROID_ERROR);
+  return Platform.select({
+    android: () =>
+      IoReactNativeIntegrity.prepareIntegrityToken(cloudProjectNumber),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
 }
 
 /**
@@ -192,7 +212,8 @@ export function prepareIntegrityToken(
  * - The {@link prepareIntegrityToken} function hasn't been called previously.
  */
 export function requestIntegrityToken(requestHash?: string): Promise<string> {
-  return isAndroid()
-    ? IoReactNativeIntegrity.requestIntegrityToken(requestHash)
-    : Promise.reject(NOT_ANDROID_ERROR);
+  return Platform.select({
+    android: () => IoReactNativeIntegrity.requestIntegrityToken(requestHash),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
 }
