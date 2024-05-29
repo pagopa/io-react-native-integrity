@@ -5,6 +5,7 @@ import {
   getAttestation,
   isAttestationServiceAvailable,
   generateHardwareSignatureWithAssertion,
+  decodeAssertion,
   type IntegrityError,
 } from '@pagopa/io-react-native-integrity';
 import { BACKEND_ADDRESS } from '@env';
@@ -107,17 +108,22 @@ export default function App() {
   };
 
   const verifyAssertion = async () => {
-    // verify attestation on the server with POST
-    // and body of challenge, attestation and keyId
-
-    const result = await postRequest('assertion/verify', {
-      challenge: challenge,
-      assertion: assertion,
-      hardwareKeyTag: hardwareKeyTag,
-      payload: JSON.stringify({ challenge: challenge, jwk: jwk }),
-    });
-    const response = await result.json();
-    setDebugLog(JSON.stringify(response));
+    if (assertion) {
+      // decode CBOR assertion on native side (iOS only)
+      const decodedAssertion = await decodeAssertion(assertion);
+      // verify attestation on the server with POST
+      // and body of challenge, attestation and keyId
+      const result = await postRequest('assertion/verify', {
+        challenge: challenge,
+        assertion: decodedAssertion,
+        hardwareKeyTag: hardwareKeyTag,
+        payload: JSON.stringify({ challenge: challenge, jwk: jwk }),
+      });
+      const response = await result.json();
+      setDebugLog(JSON.stringify(response));
+    } else {
+      setDebugLog('No assertion to verify');
+    }
   };
 
   const getHardwareSignatureWithAssertion = async () => {

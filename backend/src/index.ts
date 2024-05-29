@@ -102,7 +102,7 @@ app.post(`/assertion/verify`, (req, res) => {
     }
 
     const result = verifyAssertion({
-      assertion: assertion,
+      assertion: Buffer.from(assertion, 'base64').toString('utf-8'),
       payload: req.body.payload,
       publicKey: attestation.publicKey,
       bundleIdentifier: BUNDLE_IDENTIFIER,

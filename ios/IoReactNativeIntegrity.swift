@@ -1,10 +1,61 @@
 import DeviceCheck
 import CryptoKit
+import SwiftCBOR
 
 /// A class to interact with the DeviceCheck and CryptoKit frameworks to ensure the integrity of the device and app.
 @objc(IoReactNativeIntegrity)
 class IoReactNativeIntegrity: NSObject {
   private typealias ME = ModuleException
+  
+  struct DecodedData: Codable {
+    var signature: [UInt8]
+    var authenticatorData: [UInt8]
+  }
+  
+  enum CBORDecodingError: Error {
+    case invalidFormat(String)
+  }
+  
+  /// Decodes a base64 encoded CBOR assertion into a JSON object.
+  /// - Parameters:
+  ///   - assertion: The CBOR assertion to decode.
+  /// - Returns: A JSON object representing the decoded assertion.
+  @objc(decodeAssertion:withResolver:withRejecter:)
+  func decodeAssertion(
+    assertion: String,
+    resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) -> Void {
+    // Attempt to decode the CBOR data
+    do {
+      // Convert base64 encoded assertion string to Data
+      guard let data = Data(base64Encoded: assertion) else {
+        throw CBORDecodingError.invalidFormat("Expected base64 endoded string")
+      }
+      
+      let cborData = [UInt8](data)
+      let decodedValue = try CBOR.decode(cborData)
+      
+      // Ensure the decoded value is a map
+      guard case let .map(map) = decodedValue else {
+        throw CBORDecodingError.invalidFormat("Expected CBOR map")
+      }
+      
+      // Extract the signature and authenticatorData from the map
+      guard case let .byteString(signatureBytes)? = map["signature"],
+            case let .byteString(authenticatorDataBytes)? = map["authenticatorData"] else {
+        throw CBORDecodingError.invalidFormat("Expected signature and authenticatorData in the CBOR map")
+      }
+     
+      let decodedData = DecodedData(signature: signatureBytes, authenticatorData: authenticatorDataBytes)
+      
+      let jsonData = try JSONEncoder().encode(decodedData)
+      
+      resolve(jsonData.base64EncodedString())
+    } catch {
+      ME.decodingAssertionFailed.reject(reject: reject, ("error", error.localizedDescription))
+    }
+  }
   
   /// Determines if the DeviceCheck App Attestation Service is available on the device.
   /// - Parameters:
@@ -170,6 +221,7 @@ class IoReactNativeIntegrity: NSObject {
     case challengeError = "CHALLANGE_ERROR"
     case clientDataEncodingError = "CLIENT_DATA_ENCODING_ERROR"
     case generationAssertionFailed = "GENERATION_ASSERTION_FAILED"
+    case decodingAssertionFailed = "DECODING_ASSERTION_FAILED"
     
     func error(userInfo: [String : Any]? = nil) -> NSError {
       switch self {
@@ -186,6 +238,8 @@ class IoReactNativeIntegrity: NSObject {
       case .clientDataEncodingError:
         return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
       case .generationAssertionFailed:
+        return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
+      case .decodingAssertionFailed:
         return NSError(domain: self.rawValue, code: -1, userInfo: userInfo)
       }
     }
