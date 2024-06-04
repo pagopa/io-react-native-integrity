@@ -25,7 +25,6 @@ A (Key Attestation)[https://developer.android.com/privacy-and-security/security-
 During key attestation, a key pair is generated along with its certificate chain hich can be used to verify the properties of that key pair.
 If the device supports hardware-level key attestation, the root certificate of the chain is signed using an attestation root key protected by the device's hardware-backed keystore.
 
-
 ### `isPlayServicesAvailable`
 
 Returns a boolean value indicating whether the Play Services are available on the device or not.
@@ -64,6 +63,7 @@ try {
 
 Requests an integrity token which is then attached to the request to be protected.
 It must be called AFTER `prepareIntegrityToken` has been called and resolved successfully.
+The token is a base64 encoded string.
 
 ```ts
 try {
@@ -140,6 +140,20 @@ try {
 }
 ```
 
+### `decodeAttestation`
+
+Decodes the CBOR encoded attestation returned by the `getAttestation` method. Returns an object containing `signature` and `authenticatorData` as base64 encoded strings.
+
+```ts
+try {
+  const decoded = await decodeAttestation(attestation);
+  console.log(decoded);
+} catch (e) {
+  const error = e as IntegrityError;
+  console.log(JSON.stringify(error));
+}
+```
+
 ## Types
 
 |      TypeName      | Description                                                                                                                       |
@@ -176,3 +190,7 @@ MIT
 ---
 
 Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
+
+```
+
+```
