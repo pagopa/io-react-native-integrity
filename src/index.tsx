@@ -159,7 +159,9 @@ export function generateHardwareSignatureWithAssertion(
  * @param assertion - the CBOR assertion to be decoded
  * @returns - a promise that resolves to a string.
  */
-export function decodeAssertion(assertion: string): Promise<string> {
+export function decodeAssertion(
+  assertion: string
+): Promise<{ signature: string; authenticatorData: string }> {
   return IoReactNativeIntegrity.decodeAssertion(assertion);
 }
 

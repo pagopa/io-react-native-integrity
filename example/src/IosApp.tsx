@@ -111,11 +111,13 @@ export default function App() {
     if (assertion) {
       // decode CBOR assertion on native side (iOS only)
       const decodedAssertion = await decodeAssertion(assertion);
+      console.log(decodedAssertion);
       // verify attestation on the server with POST
       // and body of challenge, attestation and keyId
       const result = await postRequest('assertion/verify', {
         challenge: challenge,
-        assertion: decodedAssertion,
+        signature: decodedAssertion.signature,
+        authenticatorData: decodedAssertion.authenticatorData,
         hardwareKeyTag: hardwareKeyTag,
         payload: JSON.stringify({ challenge: challenge, jwk: jwk }),
       });
