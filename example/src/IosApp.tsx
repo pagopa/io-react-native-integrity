@@ -47,10 +47,14 @@ export default function App() {
   }, []);
 
   const getHardwareKey = async () => {
-    setHardwareKeyTag(undefined);
-    const hardwareKey = await generateHardwareKey();
-    setHardwareKeyTag(hardwareKey);
-    setDebugLog(hardwareKey);
+    try {
+      setHardwareKeyTag(undefined);
+      const hardwareKey = await generateHardwareKey();
+      setHardwareKeyTag(hardwareKey);
+      setDebugLog(hardwareKey);
+    } catch (e) {
+      setDebugLog(`${e}`);
+    }
   };
 
   const postRequest = async (endpoint: string, body: object) => {
@@ -68,82 +72,88 @@ export default function App() {
   const getChallengeFromServer = async () => {
     // contact server run on local at port 3000 to get
     // the challenge to be used for the attestation
-    try {
-      const response = await fetch(`${BACKEND_ADDRESS}/attest/nonce`);
-      const result = await response.json();
-      return result.nonce;
-    } catch {
-      return '';
-    }
+    const response = await fetch(`${BACKEND_ADDRESS}/attest/nonce`);
+    const result = await response.json();
+    return result.nonce;
   };
 
   const requestAttestation = async () => {
-    setAttestation(undefined);
-    if (hardwareKeyTag) {
-      // get challenge from server
-      const nonce = await getChallengeFromServer();
-      setChallenge(nonce);
-      getAttestation(nonce, hardwareKeyTag)
-        .then((result) => {
-          setAttestation(result);
-          setDebugLog(result);
-        })
-        .catch((error: IntegrityError) => {
-          setDebugLog(error.message + ':' + JSON.stringify(error.userInfo));
-          setAttestation('');
-        });
+    try {
+      setAttestation(undefined);
+      if (hardwareKeyTag) {
+        // get challenge from server
+        const nonce = await getChallengeFromServer();
+        setChallenge(nonce);
+        const res = await getAttestation(nonce, hardwareKeyTag);
+        setAssertion(res);
+        setDebugLog(res);
+      }
+    } catch (e) {
+      setDebugLog(`${e}`);
     }
   };
 
   const verifyAttestation = async () => {
-    // verify attestation on the server with POST
-    // and body of challenge, attestation and keyId
-    const result = await postRequest('attest/verify', {
-      challenge: challenge,
-      attestation: attestation,
-      hardwareKeyTag: hardwareKeyTag,
-    });
-    const response = await result.json();
-    setDebugLog(JSON.stringify(response));
-  };
-
-  const verifyAssertion = async () => {
-    if (assertion) {
-      // decode CBOR assertion on native side (iOS only)
-      const decodedAssertion = await decodeAssertion(assertion);
+    try {
       // verify attestation on the server with POST
       // and body of challenge, attestation and keyId
-      const result = await postRequest('assertion/verify', {
+      const result = await postRequest('attest/verify', {
         challenge: challenge,
-        signature: decodedAssertion.signature,
-        authenticatorData: decodedAssertion.authenticatorData,
+        attestation: attestation,
         hardwareKeyTag: hardwareKeyTag,
-        payload: JSON.stringify({ challenge: challenge, jwk: jwk }),
       });
       const response = await result.json();
       setDebugLog(JSON.stringify(response));
-    } else {
-      setDebugLog('No assertion to verify');
+    } catch (e) {
+      setDebugLog(`${e}`);
+    }
+  };
+
+  const verifyAssertion = async () => {
+    try {
+      if (assertion) {
+        // decode CBOR assertion on native side (iOS only)
+        const decodedAssertion = await decodeAssertion(assertion);
+        // verify attestation on the server with POST
+        // and body of challenge, attestation and keyId
+        const result = await postRequest('assertion/verify', {
+          challenge: challenge,
+          signature: decodedAssertion.signature,
+          authenticatorData: decodedAssertion.authenticatorData,
+          hardwareKeyTag: hardwareKeyTag,
+          payload: JSON.stringify({ challenge: challenge, jwk: jwk }),
+        });
+        const response = await result.json();
+        setDebugLog(JSON.stringify(response));
+      } else {
+        setDebugLog('No assertion to verify');
+      }
+    } catch (e) {
+      setDebugLog(`${e}`);
     }
   };
 
   const getHardwareSignatureWithAssertion = async () => {
-    const clientData = {
-      challenge: challenge,
-      jwk: jwk,
-    };
-    // Between Android and iOS there is a difference for the generation of hardwareSignature
-    // and assertion as on iOS both are generated directly from the SDK via generateAssertion
-    // while on Android the hardwareSignature must be generated via the signature functions and
-    // the assertion must be retrieved from the backend via an integrityToken.
-    if (hardwareKeyTag) {
-      const result = await generateHardwareSignatureWithAssertion(
-        JSON.stringify(clientData),
-        hardwareKeyTag
-      );
-      setHsWithAssertion(result);
-      setDebugLog(result);
-      setAssertion(result);
+    try {
+      const clientData = {
+        challenge: challenge,
+        jwk: jwk,
+      };
+      // Between Android and iOS there is a difference for the generation of hardwareSignature
+      // and assertion as on iOS both are generated directly from the SDK via generateAssertion
+      // while on Android the hardwareSignature must be generated via the signature functions and
+      // the assertion must be retrieved from the backend via an integrityToken.
+      if (hardwareKeyTag) {
+        const result = await generateHardwareSignatureWithAssertion(
+          JSON.stringify(clientData),
+          hardwareKeyTag
+        );
+        setHsWithAssertion(result);
+        setDebugLog(result);
+        setAssertion(result);
+      }
+    } catch (e) {
+      setDebugLog(`${e}`);
     }
   };
 
