@@ -204,6 +204,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       .setDigests(KeyProperties.DIGEST_SHA256).setKeySize(256).setAttestationChallenge(challenge)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && hasStrongBox) {
       builder.setIsStrongBoxBacked(true)
+      builder.setUnlockedDeviceRequired(true)
     }
     val keyPairGenerator = KeyPairGenerator.getInstance(
       KeyProperties.KEY_ALGORITHM_EC, KEYSTORE_PROVIDER
