@@ -89,8 +89,6 @@ app.post(`/assertion/verify`, (req, res) => {
   try {
     const { hardwareKeyTag } = req.body;
 
-    console.log(req.body);
-
     if (hardwareKeyTag === undefined) {
       throw new Error('Invalid authentication');
     }
