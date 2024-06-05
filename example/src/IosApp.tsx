@@ -85,7 +85,7 @@ export default function App() {
         const nonce = await getChallengeFromServer();
         setChallenge(nonce);
         const res = await getAttestation(nonce, hardwareKeyTag);
-        setAssertion(res);
+        setAttestation(res);
         setDebugLog(res);
       }
     } catch (e) {
