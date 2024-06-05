@@ -46,6 +46,15 @@ export type IntegrityError = {
 };
 
 /**
+ * Type of the decoded attestation.
+ * Both signature and authenticatorData are base64 encoded.
+ */
+export type DecodedAttestation = {
+  signature: string;
+  authenticatorData: string;
+};
+
+/**
  * Error when the platform is not supported.
  */
 const IntegrityErrorUnsupportedError: IntegrityError = {
@@ -157,9 +166,11 @@ export function generateHardwareSignatureWithAssertion(
  * instance of {@link IntegrityError}.
  *
  * @param assertion - the CBOR assertion to be decoded
- * @returns - a promise that resolves to a string.
+ * @returns - a promise that resolves to a {@link DecodedAttestation} which contains base64 encoded signature and authenticatorData.
  */
-export function decodeAssertion(assertion: string): Promise<string> {
+export function decodeAssertion(
+  assertion: string
+): Promise<DecodedAttestation> {
   return IoReactNativeIntegrity.decodeAssertion(assertion);
 }
 
@@ -204,7 +215,7 @@ export function prepareIntegrityToken(
  * Integrity token request step for a [Play Integrity standard API request](https://developer.android.com/google/play/integrity/standard).
  * It requests an integrity token which is then attached to the request to be protected.
  * It should be called AFTER {@link prepareIntegrityToken} has been called and resolved successfully.
- * The React Native
+ * The token is a base64 encoded string.
  * @param requestHash a digest of all relevant request parameters (e.g. SHA256) from the user action or server request that is happening.
  * The max size of this field is 500 bytes. Do not put sensitive information as plain text in this field.
  * @returns a resolved promise with with the token as payload, rejected otherwise when:

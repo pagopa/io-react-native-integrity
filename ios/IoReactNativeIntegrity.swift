@@ -7,11 +7,6 @@ import SwiftCBOR
 class IoReactNativeIntegrity: NSObject {
   private typealias ME = ModuleException
   
-  struct DecodedData: Codable {
-    var signature: [UInt8]
-    var authenticatorData: [UInt8]
-  }
-  
   enum CBORDecodingError: Error {
     case invalidFormat(String)
   }
@@ -46,12 +41,13 @@ class IoReactNativeIntegrity: NSObject {
             case let .byteString(authenticatorDataBytes)? = map["authenticatorData"] else {
         throw CBORDecodingError.invalidFormat("Expected signature and authenticatorData in the CBOR map")
       }
-     
-      let decodedData = DecodedData(signature: signatureBytes, authenticatorData: authenticatorDataBytes)
       
-      let jsonData = try JSONEncoder().encode(decodedData)
+      let decodedData: [String:String]  = [
+        "signature": Data(signatureBytes).base64EncodedString(),
+        "authenticatorData": Data(authenticatorDataBytes).base64EncodedString()
+      ]
       
-      resolve(jsonData.base64EncodedString())
+      resolve(decodedData)
     } catch {
       ME.decodingAssertionFailed.reject(reject: reject, ("error", error.localizedDescription))
     }

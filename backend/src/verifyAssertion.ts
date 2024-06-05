@@ -1,7 +1,8 @@
 import { createHash, createVerify } from 'crypto';
 
 export type VerifyAssertionParams = {
-  assertion: string;
+  signature: string;
+  authenticatorData: string;
   payload: Buffer;
   publicKey: string;
   bundleIdentifier: string;
@@ -16,7 +17,8 @@ export type VerifyAssertionParams = {
  */
 const verifyAssertion = (params: VerifyAssertionParams) => {
   const {
-    assertion,
+    signature,
+    authenticatorData,
     payload,
     publicKey,
     bundleIdentifier,
@@ -32,8 +34,12 @@ const verifyAssertion = (params: VerifyAssertionParams) => {
     throw new Error('teamIdentifier is required');
   }
 
-  if (!assertion) {
-    throw new Error('assertion is required');
+  if (!signature) {
+    throw new Error('signature is required');
+  }
+
+  if (!authenticatorData) {
+    throw new Error('authenticatorData is required');
   }
 
   if (!payload) {
@@ -44,11 +50,8 @@ const verifyAssertion = (params: VerifyAssertionParams) => {
     throw new Error('publicKey is required');
   }
 
-  // 1. Get signature and authenticator data from the assertion.
-  const { signature, authenticatorData } = JSON.parse(assertion);
-
-  const sign = Buffer.from(signature);
-  const authData = Buffer.from(authenticatorData);
+  const sign = Buffer.from(signature, 'base64');
+  const authData = Buffer.from(authenticatorData, 'base64');
   // 2. Compute the SHA256 hash of the client data, and store it as clientDataHash.
   const clientDataHash = createHash('sha256').update(payload).digest();
 

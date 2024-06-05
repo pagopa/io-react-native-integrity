@@ -87,9 +87,9 @@ app.post(`/attest/verify`, (req, res) => {
  */
 app.post(`/assertion/verify`, (req, res) => {
   try {
-    const { hardwareKeyTag, assertion } = req.body;
+    const { hardwareKeyTag } = req.body;
 
-    if (hardwareKeyTag === undefined || assertion === undefined) {
+    if (hardwareKeyTag === undefined) {
       throw new Error('Invalid authentication');
     }
 
@@ -102,7 +102,8 @@ app.post(`/assertion/verify`, (req, res) => {
     }
 
     const result = verifyAssertion({
-      assertion: Buffer.from(assertion, 'base64').toString('utf-8'),
+      signature: req.body.signature,
+      authenticatorData: req.body.authenticatorData,
       payload: req.body.payload,
       publicKey: attestation.publicKey,
       bundleIdentifier: BUNDLE_IDENTIFIER,
