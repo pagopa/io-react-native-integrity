@@ -1,6 +1,6 @@
 {
   "name": "@pagopa/io-react-native-integrity",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React Native package which bridges Andoird Play Integrity API and iOS App Attest",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
