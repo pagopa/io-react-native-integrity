@@ -46,7 +46,7 @@ export type IntegrityError = {
 };
 
 /**
- * Tpye of the decoded attestation.
+ * Type of the decoded attestation.
  * Both signature and authenticatorData are base64 encoded.
  */
 export type DecodedAttestation = {
