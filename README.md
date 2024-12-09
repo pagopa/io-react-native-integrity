@@ -21,7 +21,7 @@ An example is provided in the [example/backend](example/backend) directory. Make
 The flow provided by the library is the [standard one](https://developer.android.com/google/play/integrity/standard?hl=it).
 The main difference from iOS is that Android relies on Google Play Services and a remote service provided by Google.
 
-A (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation] can be generated using the `getAttestation` method.
+A [Key Attestation](https://developer.android.com/privacy-and-security/security-key-attestation) can be generated using the `getAttestation` method.
 During key attestation, a key pair is generated along with its certificate chain hich can be used to verify the properties of that key pair.
 If the device supports hardware-level key attestation, the root certificate of the chain is signed using an attestation root key protected by the device's hardware-backed keystore.
 
@@ -79,9 +79,13 @@ try {
 
 Returns a [Key Attestation](https://developer.android.com/privacy-and-security/security-key-attestation) which can later be verified by the backend server.
 
+> [!WARNING]
+> `hardwareKeyTag` is the alias on the key which will be created in the Android KeyStore. Providing an alias which is already in use
+> will result in a new key being generated and the old one being overwritten. This can lead to data loss associated with the old key.
+
 ```ts
 try {
-  const attestation = await getAttestation();
+  const attestation = await getAttestation(challenge, hardwareKeyTag);
   console.log(attestation);
 } catch (e) {
   const error = e as IntegrityError;
