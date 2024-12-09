@@ -79,10 +79,6 @@ try {
 
 Returns a [Key Attestation](https://developer.android.com/privacy-and-security/security-key-attestation) which can later be verified by the backend server.
 
-> [!WARNING]
-> `hardwareKeyTag` is the alias on the key which will be created in the Android KeyStore. Providing an alias which is already in use
-> will result in a new key being generated and the old one being overwritten. This can lead to data loss associated with the old key.
-
 ```ts
 try {
   const attestation = await getAttestation(challenge, hardwareKeyTag);
@@ -174,6 +170,7 @@ try {
 |           REQUEST_TOKEN_FAILED           |   Android   | A critical error occurred during the `requestIntegrityToken` operation                               |
 |        REQUEST_ATTESTATION_FAILED        |   Android   | A critical error occurred during the `getAttestation` operation                                      |
 |        KEY_IS_NOT_HARDWARE_BACKED        |   Android   | The device doesn't support hardware backed keys, thus it cannot be trusted                           |
+|            KEY_ALREADY_EXISTS            |   Android   | The provided `hardwareKeyTag` already has an associated key                                          |
 |         KEYSTORE_NOT_INITIALIZED         |   Android   | A critical error occurred while initializing the keystore service                                    |
 |          GENERATION_KEY_FAILED           |     iOS     | A critical error occurred during the `generateHardwareKey` operation                                 |
 |            ATTESTATION_ERROR             |     iOS     | A critical error occurred during the `getAttestation` operation                                      |

@@ -220,6 +220,33 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   }
 
   /**
+   * Gets the keypair for a given keyTag.
+   * @param keyTag the keyTag associated with the key pair
+   * @return the KeyPair associated with the given keyTag. if the keyTag doesn't exists, or an
+   * exception occurs, it returns null.
+   */
+  private fun getKeyPair(keyTag: String): KeyPair? {
+    try {
+      keyStore?.let {
+        val privateKey = it.getKey(keyTag, null) as? PrivateKey
+        privateKey?.also { _ ->
+          return if (isKeyHardwareBacked(privateKey)) {
+            val publicKey = it.getCertificate(keyTag).publicKey
+            KeyPair(publicKey, privateKey)
+          } else {
+            null
+          }
+        }
+      }
+      return null
+    } catch (_: Exception) {
+      return null
+    }
+  }
+
+  private fun keyExists(keyTag: String) = getKeyPair(keyTag) != null
+
+  /**
    * Generates a (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation].
    * During key attestation, a key pair is generated along with its certificate chain,
    * which can be used to verify the properties of that key pair.
@@ -242,6 +269,10 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
         // Remove this block if the minSdkVersion is set to 24
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
           ModuleException.UNSUPPORTED_DEVICE.reject(promise)
+          return@Thread
+        }
+        if(keyExists(keyAlias)){
+          ModuleException.KEY_ALREADY_EXISTS.reject(promise)
           return@Thread
         }
         val hasStrongBox =
@@ -309,6 +340,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")), UNSUPPORTED_DEVICE(
         Exception("UNSUPPORTED_DEVICE")
       ),
+      KEY_ALREADY_EXISTS(Exception("KEY_ALREADY_EXISTS")),
       KEYSTORE_NOT_INITIALIZED(Exception("KEYSTORE_NOT_INITIALIZED"));
 
       /**
