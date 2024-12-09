@@ -8,6 +8,7 @@ import {
 } from '@pagopa/io-react-native-integrity';
 import ButtonWithLoader from './components/ButtonWithLoader';
 import { BACKEND_ADDRESS, GOOGLE_CLOUD_PROJECT_NUMBER } from '@env';
+import uuid from 'react-native-uuid';
 
 export default function AndroidApp() {
   const [isServiceAvailable, setIsServiceAvailable] =
@@ -70,7 +71,8 @@ export default function AndroidApp() {
   const requestAttestation = async () => {
     try {
       setIsGetAttestationLoading(true);
-      const att = await getAttestation('randomvalue', 'integrity-key');
+      const hardwareKeyTag = uuid.v4();
+      const att = await getAttestation('randomvalue', hardwareKeyTag);
       setAttestation(att);
       setIsGetAttestationLoading(false);
       setDebugLog(att);
