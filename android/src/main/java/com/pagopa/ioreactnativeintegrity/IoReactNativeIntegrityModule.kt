@@ -230,12 +230,8 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       keyStore?.let {
         val privateKey = it.getKey(keyTag, null) as? PrivateKey
         privateKey?.also { _ ->
-          return if (isKeyHardwareBacked(privateKey)) {
-            val publicKey = it.getCertificate(keyTag).publicKey
-            KeyPair(publicKey, privateKey)
-          } else {
-            null
-          }
+          val publicKey = it.getCertificate(keyTag).publicKey
+          return KeyPair(publicKey, privateKey)
         }
       }
       return null
@@ -271,7 +267,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           ModuleException.UNSUPPORTED_DEVICE.reject(promise)
           return@Thread
         }
-        if(keyExists(keyAlias)){
+        if (keyExists(keyAlias)) {
           ModuleException.KEY_ALREADY_EXISTS.reject(promise)
           return@Thread
         }
@@ -340,8 +336,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")), UNSUPPORTED_DEVICE(
         Exception("UNSUPPORTED_DEVICE")
       ),
-      KEY_ALREADY_EXISTS(Exception("KEY_ALREADY_EXISTS")),
-      KEYSTORE_NOT_INITIALIZED(Exception("KEYSTORE_NOT_INITIALIZED"));
+      KEY_ALREADY_EXISTS(Exception("KEY_ALREADY_EXISTS")), KEYSTORE_NOT_INITIALIZED(Exception("KEYSTORE_NOT_INITIALIZED"));
 
       /**
        * Rejects the provided promise with the appropriate error message and additional data.
