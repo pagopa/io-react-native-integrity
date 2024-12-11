@@ -21,7 +21,7 @@ An example is provided in the [example/backend](example/backend) directory. Make
 The flow provided by the library is the [standard one](https://developer.android.com/google/play/integrity/standard?hl=it).
 The main difference from iOS is that Android relies on Google Play Services and a remote service provided by Google.
 
-A (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation] can be generated using the `getAttestation` method.
+A [Key Attestation](https://developer.android.com/privacy-and-security/security-key-attestation) can be generated using the `getAttestation` method.
 During key attestation, a key pair is generated along with its certificate chain hich can be used to verify the properties of that key pair.
 If the device supports hardware-level key attestation, the root certificate of the chain is signed using an attestation root key protected by the device's hardware-backed keystore.
 
@@ -81,7 +81,7 @@ Returns a [Key Attestation](https://developer.android.com/privacy-and-security/s
 
 ```ts
 try {
-  const attestation = await getAttestation();
+  const attestation = await getAttestation(challenge, hardwareKeyTag);
   console.log(attestation);
 } catch (e) {
   const error = e as IntegrityError;
@@ -170,6 +170,7 @@ try {
 |           REQUEST_TOKEN_FAILED           |   Android   | A critical error occurred during the `requestIntegrityToken` operation                               |
 |        REQUEST_ATTESTATION_FAILED        |   Android   | A critical error occurred during the `getAttestation` operation                                      |
 |        KEY_IS_NOT_HARDWARE_BACKED        |   Android   | The device doesn't support hardware backed keys, thus it cannot be trusted                           |
+|            KEY_ALREADY_EXISTS            |   Android   | The provided `hardwareKeyTag` already has an associated key                                          |
 |         KEYSTORE_NOT_INITIALIZED         |   Android   | A critical error occurred while initializing the keystore service                                    |
 |          GENERATION_KEY_FAILED           |     iOS     | A critical error occurred during the `generateHardwareKey` operation                                 |
 |            ATTESTATION_ERROR             |     iOS     | A critical error occurred during the `getAttestation` operation                                      |

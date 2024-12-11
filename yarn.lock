@@ -2586,6 +2586,7 @@ __metadata:
     react-native: 0.73.6
     react-native-dotenv: ^3.4.11
     react-native-sha256: ^1.4.10
+    react-native-uuid: ^2.0.3
   languageName: unknown
   linkType: soft
 
@@ -11412,6 +11413,13 @@ __metadata:
   version: 1.4.10
   resolution: "react-native-sha256@npm:1.4.10"
   checksum: db49be891c2eece1de582215637c463fc5636fce7d58c2e78f1e60d6847eb121d3233f12c5793f43a193df6a79852eec459ef1a7e34c70133146a9fe332f055b
+  languageName: node
+  linkType: hard
+
+"react-native-uuid@npm:^2.0.3":
+  version: 2.0.3
+  resolution: "react-native-uuid@npm:2.0.3"
+  checksum: e47774481feaed5d38f75fb4b03f5189c03e7452038f1b0fa56677add8a8bdef64ec7ad5e83f9fa761d8788cac5c8e554ade07e82a2818145337df7c883e2124
   languageName: node
   linkType: hard
 

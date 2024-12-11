@@ -204,7 +204,13 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       .setDigests(KeyProperties.DIGEST_SHA256).setKeySize(256).setAttestationChallenge(challenge)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && hasStrongBox) {
       builder.setIsStrongBoxBacked(true)
-      builder.setUnlockedDeviceRequired(true)
+      /**
+       * We are currently not using this access policy due to a bug in Android 14 and below which
+       * prevents the key to be accessed in some scenarios like unlocking with face recognition.
+       * More (here)[https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUnlockedDeviceRequired(boolean)]
+       * It will be enabled only for Android 15 later when we can thoroughly test this.
+       * builder.setUnlockedDeviceRequired(true)
+       */
     }
     val keyPairGenerator = KeyPairGenerator.getInstance(
       KeyProperties.KEY_ALGORITHM_EC, KEYSTORE_PROVIDER
@@ -212,6 +218,29 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     keyPairGenerator.initialize(builder.build())
     return keyPairGenerator.generateKeyPair()
   }
+
+  /**
+   * Gets the keypair for a given keyTag.
+   * @param keyTag the keyTag associated with the key pair
+   * @return the KeyPair associated with the given keyTag. if the keyTag doesn't exists, or an
+   * exception occurs, it returns null.
+   */
+  private fun getKeyPair(keyTag: String): KeyPair? {
+    try {
+      keyStore?.let {
+        val privateKey = it.getKey(keyTag, null) as? PrivateKey
+        privateKey?.also { _ ->
+          val publicKey = it.getCertificate(keyTag).publicKey
+          return KeyPair(publicKey, privateKey)
+        }
+      }
+      return null
+    } catch (_: Exception) {
+      return null
+    }
+  }
+
+  private fun keyExists(keyTag: String) = getKeyPair(keyTag) != null
 
   /**
    * Generates a (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation].
@@ -226,11 +255,11 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * - The [challenge] exceeds the size of 128 bytes;
    * - The key attestation generation fails.
    * @param challenge the challenge to be included which has a max size of 128 bytes.
-   * @param keyAlias optional key alias for the generated key pair.
+   * @param keyAlias key alias for the generated key pair.
    * @param promise the React Native promise to be resolved or rejected.
    */
   @ReactMethod
-  fun getAttestation(challenge: String, keyAlias: String?, promise: Promise) {
+  fun getAttestation(challenge: String, keyAlias: String, promise: Promise) {
     Thread {
       try {
         // Remove this block if the minSdkVersion is set to 24
@@ -238,19 +267,22 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           ModuleException.UNSUPPORTED_DEVICE.reject(promise)
           return@Thread
         }
-        val alias = keyAlias ?: "attestationKeyAlias"
+        if (keyExists(keyAlias)) {
+          ModuleException.KEY_ALREADY_EXISTS.reject(promise)
+          return@Thread
+        }
         val hasStrongBox =
           Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && reactApplicationContext.packageManager.hasSystemFeature(
             PackageManager.FEATURE_STRONGBOX_KEYSTORE
           )
-        val keyPair = generateAttestationKey(alias, challenge.toByteArray(), hasStrongBox)
+        val keyPair = generateAttestationKey(keyAlias, challenge.toByteArray(), hasStrongBox)
         if (!isKeyHardwareBacked(keyPair.private)) {
           // We check if the key is hardware backed just to be sure exclude software fallback
           ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
           return@Thread
         }
         keyStore?.let {
-          val chain = it.getCertificateChain(alias)
+          val chain = it.getCertificateChain(keyAlias)
           // The certificate chain consists of an array of certificates, thus we concat them into a string
           var attestations = arrayOf<String>()
           chain.forEachIndexed { _, certificate ->
@@ -304,7 +336,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")), UNSUPPORTED_DEVICE(
         Exception("UNSUPPORTED_DEVICE")
       ),
-      KEYSTORE_NOT_INITIALIZED(Exception("KEYSTORE_NOT_INITIALIZED"));
+      KEY_ALREADY_EXISTS(Exception("KEY_ALREADY_EXISTS")), KEYSTORE_NOT_INITIALIZED(Exception("KEYSTORE_NOT_INITIALIZED"));
 
       /**
        * Rejects the provided promise with the appropriate error message and additional data.
