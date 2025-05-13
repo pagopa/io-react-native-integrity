@@ -9,6 +9,7 @@ import android.security.keystore.KeyProperties.SECURITY_LEVEL_STRONGBOX
 import android.security.keystore.KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT
 import android.security.keystore.KeyProperties.SECURITY_LEVEL_UNKNOWN_SECURE
 import android.util.Base64
+import android.util.Log
 import androidx.annotation.RequiresApi
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -189,6 +190,37 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * @param challenge the public key certificate for this key pair will contain an extension that
    * describes the details of the key's configuration and authorizations, including the
    * [challenge] value.
+   * If StrongBox is enabled and the generation fails, the function will retry using TEE.
+   * @returns the generated key pair.
+   */
+  @RequiresApi(Build.VERSION_CODES.N)
+  private fun generateAttestationKeyWithFallback(keyAlias: String, challenge: ByteArray): KeyPair {
+    val hasStrongBox =
+      Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && reactApplicationContext.packageManager.hasSystemFeature(
+        PackageManager.FEATURE_STRONGBOX_KEYSTORE
+      )
+    return try {
+      // Generate the attestation key using StrongBox if available
+      generateAttestationKey(keyAlias, challenge, hasStrongBox)
+    } catch (e: Exception) {
+      // If the generation fails, we can retry the generation using TEE instead of StrongBox
+      // If the generation fails again we throw the exception
+      if (hasStrongBox) {
+        Log.w(name, "StrongBox Key Generation Failed, retrying with TEE")
+        generateAttestationKey(keyAlias, challenge, false)
+      } else {
+        // If StrongBox has not been used we throw back the error to the caller
+        throw Exception("KeyPair Failed Without Fallback", e)
+      }
+    }
+  }
+
+  /**
+   * Generates an attestation key pair using the [keyStore].
+   * @param keyAlias the key alias to generate.
+   * @param challenge the public key certificate for this key pair will contain an extension that
+   * describes the details of the key's configuration and authorizations, including the
+   * [challenge] value.
    * If the key is in secure hardware, and if the secure hardware supports attestation,
    * the certificate will be signed by a chain of certificates rooted at a trustworthy CA key.
    * Otherwise the chain will be rooted at an untrusted certificate.
@@ -271,11 +303,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           ModuleException.KEY_ALREADY_EXISTS.reject(promise)
           return@Thread
         }
-        val hasStrongBox =
-          Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && reactApplicationContext.packageManager.hasSystemFeature(
-            PackageManager.FEATURE_STRONGBOX_KEYSTORE
-          )
-        val keyPair = generateAttestationKey(keyAlias, challenge.toByteArray(), hasStrongBox)
+        val keyPair = generateAttestationKeyWithFallback(keyAlias, challenge.toByteArray())
         if (!isKeyHardwareBacked(keyPair.private)) {
           // We check if the key is hardware backed just to be sure exclude software fallback
           ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
