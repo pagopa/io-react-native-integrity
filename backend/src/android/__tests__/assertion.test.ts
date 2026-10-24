@@ -38,18 +38,35 @@ describe('verifyAndroidAssertion', () => {
    */
   const setup = async (
     registration: TestAttestationParams,
-    assertion: Partial<TestAttestationParams> = {}
+    assertion: Partial<TestAttestationParams> = {},
+    // The attest key of the fresh attestation: the registered one by default,
+    // a new one to simulate another device or null for none
+    freshAttestKey?: 'new' | null,
+    registrationAttestKey?: null
   ) => {
-    const attestation = await createAttestation(root, registration);
+    const attestation = await createAttestation(root, registration, {
+      attestKey: registrationAttestKey,
+    });
     const device: RegisteredDevice = await verifyAttestation(
       attestation.encoded,
       testOptions(root)
     );
-    const fresh = await createAttestation(root, {
-      ...registration,
-      challenge: REQUEST_HASH,
-      ...assertion,
-    });
+    const fresh = await createAttestation(
+      root,
+      {
+        ...registration,
+        challenge: REQUEST_HASH,
+        ...assertion,
+      },
+      {
+        attestKey:
+          freshAttestKey === null
+            ? null
+            : freshAttestKey === 'new'
+              ? undefined
+              : attestation.attestKey,
+      }
+    );
     const signature = crypto
       .createSign('SHA256')
       .update(CLIENT_DATA)
@@ -163,27 +180,43 @@ describe('verifyAndroidAssertion', () => {
   });
 
   it('rejects a fresh key attestation from a different device state', async () => {
+    // Without attest key, e.g. a device running the stock OS registered without it
+    const { device, signature, attestationAssertion } = await setup(
+      stockParams(),
+      { verifiedBootKey: '34'.repeat(32) },
+      null,
+      null
+    );
+    await assert.rejects(
+      verifyAndroidAssertion(
+        device,
+        { clientData: CLIENT_DATA, signature, attestationAssertion },
+        options()
+      ),
+      /Device state differs from the registration/
+    );
+  });
+
+  it('rejects a fresh key attestation with a different root of trust than the attest key', async () => {
+    const otherKey = grapheneOsParams().verifiedBootKey.replace(/^../, 'f0');
     const { device, signature, attestationAssertion } = await setup(
       grapheneOsParams(),
-      {
-        verifiedBootKey: grapheneOsParams().verifiedBootKey.replace(
-          /^../,
-          'f0'
-        ),
-      }
+      { verifiedBootKey: otherKey }
     );
-    const result = verifyAndroidAssertion(
-      device,
-      { clientData: CLIENT_DATA, signature, attestationAssertion },
-      {
-        ...options(),
-        trustedSelfSignedBootKeys: new Set([
-          device.record.rootOfTrust?.verifiedBootKey ?? '',
-          grapheneOsParams().verifiedBootKey.replace(/^../, 'f0'),
-        ]),
-      }
+    await assert.rejects(
+      verifyAndroidAssertion(
+        device,
+        { clientData: CLIENT_DATA, signature, attestationAssertion },
+        {
+          ...options(),
+          trustedSelfSignedBootKeys: new Set([
+            device.record.rootOfTrust?.verifiedBootKey ?? '',
+            otherKey,
+          ]),
+        }
+      ),
+      /Attest key root of trust does not match/
     );
-    await assert.rejects(result, /Device state differs from the registration/);
   });
 
   it('rejects when both proofs fail', async () => {
@@ -218,6 +251,62 @@ describe('verifyAndroidAssertion', () => {
       ),
       /Play Integrity: not available\. Key attestation: not provided/
     );
+  });
+
+  describe('attest key pinning', () => {
+    it('pins the attest key at registration', async () => {
+      const { device } = await setup(grapheneOsParams());
+      assert.ok(device.attestKeyPublicKey);
+    });
+
+    it('rejects a fresh key attestation relayed from another device running GrapheneOS', async () => {
+      // Same OS, model and verified boot key, but a different attest key
+      const { device, signature, attestationAssertion } = await setup(
+        grapheneOsParams(),
+        {},
+        'new'
+      );
+      await assert.rejects(
+        verifyAndroidAssertion(
+          device,
+          { clientData: CLIENT_DATA, signature, attestationAssertion },
+          options()
+        ),
+        /not been signed by the registered attest key/
+      );
+    });
+
+    it('rejects a fresh key attestation without the registered attest key', async () => {
+      const { device, signature, attestationAssertion } = await setup(
+        grapheneOsParams(),
+        {},
+        null
+      );
+      await assert.rejects(
+        verifyAndroidAssertion(
+          device,
+          { clientData: CLIENT_DATA, signature, attestationAssertion },
+          options()
+        ),
+        /not been signed by the registered attest key/
+      );
+    });
+
+    it('accepts an unpinned fresh key attestation for the stock OS registered without attest key', async () => {
+      const { device, signature, attestationAssertion } = await setup(
+        stockParams(),
+        {},
+        null,
+        null
+      );
+      assert.equal(device.attestKeyPublicKey, undefined);
+      const result = await verifyAndroidAssertion(
+        device,
+        { clientData: CLIENT_DATA, signature, attestationAssertion },
+        options()
+      );
+      assert.deepEqual(result, { method: 'key_attestation', os: 'stock' });
+    });
   });
 });
 

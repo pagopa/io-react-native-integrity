@@ -7,6 +7,7 @@ import {
   verifyAttestation,
 } from '../androidIntegrity';
 import {
+  createAttestKey,
   createAttestation,
   createTestRoot,
   grapheneOsParams,
@@ -155,11 +156,9 @@ describe('verifyAttestation', () => {
   });
 
   it('rejects a revoked certificate regardless of the serial number format', async () => {
-    const { encoded } = await createAttestation(
-      root,
-      grapheneOsParams(),
-      '00ABCDEF01'
-    );
+    const { encoded } = await createAttestation(root, grapheneOsParams(), {
+      leafSerialNumber: '00ABCDEF01',
+    });
     await assert.rejects(
       verifyAttestation(
         encoded,
@@ -176,6 +175,113 @@ describe('verifyAttestation', () => {
   it('normalizes serial numbers', () => {
     assert.equal(normalizeSerialNumber('00ABCDEF01'), 'abcdef01');
     assert.equal(normalizeSerialNumber('0'), '0');
+  });
+
+  describe('app attest key', () => {
+    it('returns the attest key public key to be pinned', async () => {
+      const { encoded, attestKey } = await createAttestation(
+        root,
+        grapheneOsParams()
+      );
+      const result = await verifyAttestation(encoded, testOptions(root));
+      assert.ok(attestKey);
+      assert.ok(result.attestKeyPublicKey);
+      assert.deepEqual(
+        result.attestKeyPublicKey.export({ format: 'der', type: 'spki' }),
+        Buffer.from(attestKey.certificate.publicKey.rawData)
+      );
+    });
+
+    it('rejects GrapheneOS without an attest key', async () => {
+      const { encoded } = await createAttestation(root, grapheneOsParams(), {
+        attestKey: null,
+      });
+      await assert.rejects(
+        verifyAttestation(encoded, testOptions(root)),
+        /An attest key is required/
+      );
+    });
+
+    it('accepts GrapheneOS without an attest key when not required', async () => {
+      const { encoded } = await createAttestation(root, grapheneOsParams(), {
+        attestKey: null,
+      });
+      const result = await verifyAttestation(
+        encoded,
+        testOptions(root, { requireAttestKeyForSelfSigned: false })
+      );
+      assert.equal(result.os, 'grapheneos');
+      assert.equal(result.attestKeyPublicKey, undefined);
+    });
+
+    const attestKeyRejections: [
+      string,
+      Parameters<typeof grapheneOsParams>[0],
+      RegExp,
+    ][] = [
+      [
+        'a signing key appended as attest key',
+        { purposes: [2] },
+        /Attest key has invalid purposes/,
+      ],
+      [
+        'an attest key with another root of trust',
+        { verifiedBootKey: '56'.repeat(32) },
+        /Attest key root of trust does not match/,
+      ],
+      [
+        'an attest key with another security level',
+        {
+          securityLevel: SecurityLevel.trustedEnvironment,
+          keymasterSecurityLevel: SecurityLevel.trustedEnvironment,
+        },
+        /Attest key security level does not match/,
+      ],
+      [
+        'an attest key of another app',
+        { packageName: 'com.example.other' },
+        /Attest key application does not match/,
+      ],
+      [
+        'an attest key with another challenge',
+        { challenge: 'other' },
+        /Attest key challenge mismatch/,
+      ],
+    ];
+
+    for (const [name, attestKeyParams, error] of attestKeyRejections) {
+      it(`rejects ${name}`, async () => {
+        const { encoded } = await createAttestation(root, grapheneOsParams(), {
+          attestKeyParams,
+        });
+        await assert.rejects(
+          verifyAttestation(encoded, testOptions(root)),
+          error
+        );
+      });
+    }
+
+    it('rejects a key attestation extension beyond the attest key', async () => {
+      const attestKey = await createAttestKey(
+        root,
+        grapheneOsParams({ purposes: [7] })
+      );
+      const { encoded } = await createAttestation(root, grapheneOsParams(), {
+        attestKey,
+      });
+      // Insert an extra certificate with the extension between the attest key and the root
+      const certificates = Buffer.from(encoded, 'base64')
+        .toString('utf-8')
+        .split(',');
+      const extra = certificates[1] as string;
+      const tampered = Buffer.from(
+        [certificates[0], extra, extra, certificates[2]].join(',')
+      ).toString('base64');
+      await assert.rejects(
+        verifyAttestation(tampered, testOptions(root)),
+        /Unexpected key attestation extension|Certificate chain is invalid/
+      );
+    });
   });
 
   describe('real Google chains', () => {

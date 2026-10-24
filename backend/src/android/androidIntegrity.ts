@@ -3,10 +3,13 @@ import { X509Certificate } from 'crypto';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import {
-  findAttestationRecord,
+  findAttestationRecords,
   type AttestationRecord,
+  type CertificateWithAttestation,
 } from './keyDescription';
 import {
+  AttestationPolicyError,
+  evaluateAttestKey,
   evaluateAttestationPolicy,
   type AttestationPolicy,
   type VerifiedOs,
@@ -128,6 +131,16 @@ export type AttestationVerificationOptions = AttestationPolicy & {
   getCrl?: () => Promise<CRL>;
   /** The current time used to validate the certificates. */
   now?: Date;
+  /**
+   * The attest key public key pinned at registration. When set, the attested key must have been
+   * attested by this attest key, which proves that the attestation comes from the registered device.
+   */
+  pinnedAttestKey?: crypto.KeyObject;
+  /**
+   * Whether devices running a self-signed OS (GrapheneOS) must use an app attest key, true by default.
+   * All the devices supported by GrapheneOS support app attest keys, which allow to pin the device.
+   */
+  requireAttestKeyForSelfSigned?: boolean;
 };
 
 /**
@@ -140,6 +153,8 @@ export type VerifiedAttestation = {
   publicKey: crypto.KeyObject;
   /** The parsed key attestation extension. */
   record: AttestationRecord;
+  /** The public key of the app attest key which attested the key, to be pinned at registration. */
+  attestKeyPublicKey?: crypto.KeyObject;
 };
 
 /**
@@ -175,10 +190,66 @@ export const verifyAttestation = async (
   );
   validateRevokation(x509Chain, await (options.getCrl ?? fetchGoogleCrl)());
   // 6.
-  const { certificate, record } = findAttestationRecord(x509Chain);
+  const { leaf, attestKey } = findAttestationRecords(x509Chain);
   // 7.
-  const os = evaluateAttestationPolicy(record, options);
-  return { os, publicKey: certificate.publicKey, record };
+  const os = evaluateAttestationPolicy(leaf.record, options);
+  if (attestKey) {
+    evaluateAttestKey(leaf.record, attestKey.record);
+  }
+  verifyAttestKeyPinning(attestKey, os, options);
+  return {
+    os,
+    publicKey: leaf.certificate.publicKey,
+    record: leaf.record,
+    attestKeyPublicKey: attestKey?.certificate.publicKey,
+  };
+};
+
+/**
+ * Checks the app attest key of the chain:
+ * - when a pinned attest key is provided (assertion), the attested key must have been attested by it;
+ * - otherwise (registration) the attest key must have been generated with the same challenge and it is
+ *   required for devices running a self-signed OS, see {@link AttestationVerificationOptions}.
+ * @param attestKey - The attest key certificate and record, if any.
+ * @param os - The {@link VerifiedOs}.
+ * @param options - The {@link AttestationVerificationOptions}.
+ * @throws {AttestationPolicyError} - If the attest key doesn't satisfy the options.
+ */
+const verifyAttestKeyPinning = (
+  attestKey: CertificateWithAttestation | undefined,
+  os: VerifiedOs,
+  options: AttestationVerificationOptions
+) => {
+  if (options.pinnedAttestKey) {
+    const toSpki = (key: crypto.KeyObject) =>
+      key.export({ format: 'der', type: 'spki' });
+    if (
+      !attestKey ||
+      !toSpki(attestKey.certificate.publicKey).equals(
+        toSpki(options.pinnedAttestKey)
+      )
+    ) {
+      throw new AttestationPolicyError(
+        'Attestation has not been signed by the registered attest key'
+      );
+    }
+    return;
+  }
+  if (attestKey) {
+    const expectedChallenge = Buffer.isBuffer(options.challenge)
+      ? options.challenge
+      : Buffer.from(options.challenge, 'utf-8');
+    if (!attestKey.record.attestationChallenge.equals(expectedChallenge)) {
+      throw new AttestationPolicyError('Attest key challenge mismatch');
+    }
+  } else if (
+    os === 'grapheneos' &&
+    (options.requireAttestKeyForSelfSigned ?? true)
+  ) {
+    throw new AttestationPolicyError(
+      'An attest key is required for devices running a self-signed OS'
+    );
+  }
 };
 
 /**
@@ -272,7 +343,14 @@ export const verifyAndroidAssertion = async (
     try {
       const { os, record } = await verifyAttestation(
         request.attestationAssertion,
-        { ...options, challenge: requestHash }
+        {
+          ...options,
+          challenge: requestHash,
+          // Fresh attestations must be signed by the attest key pinned at registration, if any
+          pinnedAttestKey: device.attestKeyPublicKey,
+          // A device registered without attest key can't be pinned, it is accepted only for the stock OS
+          requireAttestKeyForSelfSigned: true,
+        }
       );
       assertSameDeviceState(device.record, record);
       return { method: 'key_attestation', os };

@@ -162,6 +162,7 @@ router.post('/verifyAttestation', async (req, res) => {
       os: verified.os,
       rootOfTrust: verified.record.rootOfTrust,
       osPatchLevel: verified.record.osPatchLevel,
+      attestKeyPinned: verified.attestKeyPublicKey !== undefined,
     });
   } catch (error) {
     console.error(error);

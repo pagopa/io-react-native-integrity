@@ -48,6 +48,7 @@ export type TestAttestationParams = {
   signatureDigests: string[];
   osPatchLevel: number;
   origin: number;
+  purposes: number[];
 };
 
 export const grapheneOsParams = (
@@ -65,6 +66,7 @@ export const grapheneOsParams = (
   signatureDigests: [SIGNATURE_DIGEST],
   osPatchLevel: 202610,
   origin: 0,
+  purposes: [2],
   ...overrides,
 });
 
@@ -113,7 +115,7 @@ export const encodeKeyDescription = (params: TestAttestationParams) => {
       ),
     }),
     teeEnforced: new AuthorizationList({
-      purpose: new IntegerSet([2]),
+      purpose: new IntegerSet(params.purposes),
       algorithm: 3,
       keySize: 256,
       digest: new IntegerSet([4]),
@@ -185,6 +187,14 @@ export const createTestRoot = async (): Promise<TestRoot> => {
 };
 
 /**
+ * A synthetic app attest key, issued by the test root.
+ */
+export type TestAttestKey = {
+  keys: crypto.webcrypto.CryptoKeyPair;
+  certificate: x509.X509Certificate;
+};
+
+/**
  * A synthetic key attestation chain.
  */
 export type TestAttestation = {
@@ -192,34 +202,37 @@ export type TestAttestation = {
   encoded: string;
   /** The private key of the attested key, to sign the client data. */
   privateKey: crypto.KeyObject;
-  /** The hex serial number of the leaf certificate. */
-  leafSerialNumber: string;
+  /** The attest key which signed the leaf certificate, if any. */
+  attestKey?: TestAttestKey;
 };
 
-/**
- * Creates a key attestation chain issued by the test root.
- * @param root - The {@link TestRoot}.
- * @param params - The {@link TestAttestationParams}.
- * @param leafSerialNumber - The hex serial number of the leaf certificate.
- * @returns the {@link TestAttestation}.
- */
-export const createAttestation = async (
-  root: TestRoot,
-  params: TestAttestationParams,
-  leafSerialNumber = '00ABCDEF01'
-): Promise<TestAttestation> => {
-  const keys = (await crypto.webcrypto.subtle.generateKey(EC_ALGORITHM, true, [
+const generateKeys = async () =>
+  (await crypto.webcrypto.subtle.generateKey(EC_ALGORITHM, true, [
     'sign',
     'verify',
   ])) as crypto.webcrypto.CryptoKeyPair;
-  const leaf = await x509.X509CertificateGenerator.create({
-    serialNumber: leafSerialNumber,
-    subject: 'CN=Android Keystore Key',
-    issuer: root.certificate.subject,
+
+/**
+ * Creates a certificate with the key attestation extension.
+ */
+const createAttestedCertificate = (
+  subject: string,
+  issuer: {
+    certificate: x509.X509Certificate;
+    keys: crypto.webcrypto.CryptoKeyPair;
+  },
+  keys: crypto.webcrypto.CryptoKeyPair,
+  params: TestAttestationParams,
+  serialNumber: string
+) =>
+  x509.X509CertificateGenerator.create({
+    serialNumber,
+    subject,
+    issuer: issuer.certificate.subject,
     notBefore: new Date('1970-01-01T00:00:00Z'),
     notAfter: new Date('2048-01-01T00:00:00Z'),
     publicKey: keys.publicKey,
-    signingKey: root.keys.privateKey,
+    signingKey: issuer.keys.privateKey,
     signingAlgorithm: EC_ALGORITHM,
     extensions: [
       new x509.Extension(
@@ -229,10 +242,73 @@ export const createAttestation = async (
       ),
     ],
   });
+
+/**
+ * Creates an app attest key issued by the test root.
+ * @param root - The {@link TestRoot}.
+ * @param params - The {@link TestAttestationParams}, purposes should be [7] (ATTEST_KEY).
+ * @returns the {@link TestAttestKey}.
+ */
+export const createAttestKey = async (
+  root: TestRoot,
+  params: TestAttestationParams
+): Promise<TestAttestKey> => {
+  const keys = await generateKeys();
+  const certificate = await createAttestedCertificate(
+    'CN=Android Keystore Attest Key',
+    root,
+    keys,
+    params,
+    '02'
+  );
+  return { keys, certificate };
+};
+
+/**
+ * Creates a key attestation chain issued by the test root.
+ * By default the leaf is attested by a new app attest key generated with the same parameters,
+ * as done by the native module with the useAttestKey option.
+ * @param root - The {@link TestRoot}.
+ * @param params - The {@link TestAttestationParams}.
+ * @param options.attestKey - The attest key to use, null to issue the leaf directly from the root.
+ * @param options.attestKeyParams - The parameters of the new attest key, the leaf ones by default.
+ * @param options.leafSerialNumber - The hex serial number of the leaf certificate.
+ * @returns the {@link TestAttestation}.
+ */
+export const createAttestation = async (
+  root: TestRoot,
+  params: TestAttestationParams,
+  options: {
+    attestKey?: TestAttestKey | null;
+    attestKeyParams?: Partial<TestAttestationParams>;
+    leafSerialNumber?: string;
+  } = {}
+): Promise<TestAttestation> => {
+  const attestKey =
+    options.attestKey === null
+      ? undefined
+      : options.attestKey ??
+        (await createAttestKey(root, {
+          ...params,
+          purposes: [7],
+          ...options.attestKeyParams,
+        }));
+  const keys = await generateKeys();
+  const leaf = await createAttestedCertificate(
+    'CN=Android Keystore Key',
+    attestKey ?? root,
+    keys,
+    params,
+    options.leafSerialNumber ?? '00ABCDEF01'
+  );
   return {
-    encoded: encodeChain([leaf.rawData, root.certificate.rawData]),
+    encoded: encodeChain([
+      leaf.rawData,
+      ...(attestKey ? [attestKey.certificate.rawData] : []),
+      root.certificate.rawData,
+    ]),
     privateKey: crypto.KeyObject.from(keys.privateKey),
-    leafSerialNumber,
+    attestKey,
   };
 };
 

@@ -24,6 +24,7 @@ export type AttestationRecord = {
   keymasterVersion: number;
   keymasterSecurityLevel: SecurityLevel;
   attestationChallenge: Buffer;
+  purposes?: number[];
   origin?: number;
   rootOfTrust?: {
     verifiedBootKey: string;
@@ -143,6 +144,7 @@ export const parseAttestationRecord = (
     attestationChallenge: Buffer.from(
       keyDescription.attestationChallenge.buffer
     ),
+    purposes: hardwareEnforced.findProperty('purpose')?.map((p) => p),
     origin: hardwareEnforced.findProperty('origin'),
     rootOfTrust: rootOfTrust && {
       verifiedBootKey: toHex(rootOfTrust.verifiedBootKey),
@@ -170,24 +172,45 @@ export const parseAttestationRecord = (
 };
 
 /**
- * Finds the nearest certificate to the root that contains the key attestation extension and parses it.
- * Parsing the record closest to the root prevents an adversary from appending a certificate with an
- * attestation record of their choice, signed by a key attested by the TEE, to an otherwise trusted chain.
+ * The attestation records of a key attestation chain.
+ */
+export type AttestationRecords = {
+  /** The attested key, i.e. the first certificate of the chain. */
+  leaf: CertificateWithAttestation;
+  /** The app attest key which signed the leaf certificate, if any. */
+  attestKey?: CertificateWithAttestation;
+};
+
+/**
+ * Finds and parses the key attestation extensions of a chain.
+ * Only the leaf certificate and, when the key has been attested by an app attest key (API 31+),
+ * the attest key certificate which immediately follows it can contain the extension.
+ * Any other position is rejected: this prevents an adversary from appending a certificate with an
+ * attestation record of their choice, signed by a key attested by the TEE, to an otherwise trusted chain,
+ * as the attest key is also required to have only the ATTEST_KEY purpose, see {@link evaluateAttestKey}.
  * {@link https://developer.android.com/privacy-and-security/security-key-attestation#verifying}
  * @param x509Chain - The chain of {@link X509Certificate} certificates, from the leaf to the root.
- * @returns the certificate with the parsed attestation record.
- * @throws {Error} - If no key attestation extension is found.
+ * @returns the {@link AttestationRecords}.
+ * @throws {Error} - If no key attestation extension is found or it is in an unexpected position.
  */
-export const findAttestationRecord = (
+export const findAttestationRecords = (
   x509Chain: X509Certificate[]
-): CertificateWithAttestation => {
-  for (let i = x509Chain.length - 1; i >= 0; i--) {
-    const certificate = x509Chain[i];
-    const extensionValue =
-      certificate && extractExtensionValue(certificate, id_ce_keyDescription);
-    if (certificate && extensionValue) {
-      return { certificate, record: parseAttestationRecord(extensionValue) };
-    }
+): AttestationRecords => {
+  const records = x509Chain.map((certificate) => {
+    const extensionValue = extractExtensionValue(
+      certificate,
+      id_ce_keyDescription
+    );
+    return extensionValue
+      ? { certificate, record: parseAttestationRecord(extensionValue) }
+      : undefined;
+  });
+  const [leaf, attestKey, ...others] = records;
+  if (!leaf) {
+    throw new Error('No key attestation extension found in the leaf');
   }
-  throw new Error('No key attestation extension found');
+  if (others.some((record) => record !== undefined)) {
+    throw new Error('Unexpected key attestation extension in the chain');
+  }
+  return { leaf, attestKey };
 };
