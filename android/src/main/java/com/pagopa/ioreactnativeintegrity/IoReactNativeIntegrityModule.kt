@@ -28,6 +28,7 @@ import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
+import java.security.cert.Certificate
 import java.security.spec.ECGenParameterSpec
 
 /**
@@ -275,6 +276,38 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   private fun keyExists(keyTag: String) = getKeyPair(keyTag) != null
 
   /**
+   * Generates a hardware backed attestation key pair and returns its certificate chain.
+   * @param keyAlias the key alias to generate.
+   * @param challenge the challenge to be included in the attestation extension of the leaf certificate.
+   * @return the certificate chain encoded with [encodeCertificateChain].
+   * @throws ModuleError with [ModuleException.KEY_IS_NOT_HARDWARE_BACKED] if the generated key is
+   * not hardware backed or with [ModuleException.KEYSTORE_NOT_INITIALIZED] if the [keyStore] is not available.
+   */
+  @RequiresApi(Build.VERSION_CODES.N)
+  private fun generateEncodedAttestation(keyAlias: String, challenge: ByteArray): String {
+    val keyPair = generateAttestationKeyWithFallback(keyAlias, challenge)
+    if (!isKeyHardwareBacked(keyPair.private)) {
+      // We check if the key is hardware backed just to be sure exclude software fallback
+      throw ModuleError(ModuleException.KEY_IS_NOT_HARDWARE_BACKED)
+    }
+    val ks = keyStore ?: throw ModuleError(ModuleException.KEYSTORE_NOT_INITIALIZED)
+    return encodeCertificateChain(ks.getCertificateChain(keyAlias))
+  }
+
+  /**
+   * Encodes a certificate chain as a base64 string of the comma separated base64 encoded certificates.
+   * @param chain the certificate chain to encode.
+   * @return the encoded certificate chain.
+   */
+  private fun encodeCertificateChain(chain: Array<Certificate>): String {
+    // The certificate chain consists of an array of certificates, thus we concat them into a string
+    val concatenatedAttestations = chain.joinToString(",") { certificate ->
+      Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
+    }
+    return Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
+  }
+
+  /**
    * Generates a (Key Attestation)[https://developer.android.com/privacy-and-security/security-key-attestation].
    * During key attestation, a key pair is generated along with its certificate chain,
    * which can be used to verify the properties of that key pair.
@@ -303,27 +336,9 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           ModuleException.KEY_ALREADY_EXISTS.reject(promise)
           return@Thread
         }
-        val keyPair = generateAttestationKeyWithFallback(keyAlias, challenge.toByteArray())
-        if (!isKeyHardwareBacked(keyPair.private)) {
-          // We check if the key is hardware backed just to be sure exclude software fallback
-          ModuleException.KEY_IS_NOT_HARDWARE_BACKED.reject(promise)
-          return@Thread
-        }
-        keyStore?.let {
-          val chain = it.getCertificateChain(keyAlias)
-          // The certificate chain consists of an array of certificates, thus we concat them into a string
-          var attestations = arrayOf<String>()
-          chain.forEachIndexed { _, certificate ->
-            val cert = Base64.encodeToString(certificate.encoded, Base64.DEFAULT)
-            attestations += cert
-          }
-          val concatenatedAttestations = attestations.joinToString(",")
-          val encodedAttestation =
-            Base64.encodeToString(concatenatedAttestations.toByteArray(), Base64.DEFAULT)
-          promise.resolve(encodedAttestation)
-        } ?: ModuleException.KEYSTORE_NOT_INITIALIZED.reject(
-          promise
-        )
+        promise.resolve(generateEncodedAttestation(keyAlias, challenge.toByteArray()))
+      } catch (e: ModuleError) {
+        e.type.reject(promise)
       } catch (e: Exception) {
         ModuleException.REQUEST_ATTESTATION_FAILED.reject(
           promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
@@ -345,6 +360,13 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     const val NAME = "IoReactNativeIntegrity"
     const val KEYSTORE_PROVIDER = "AndroidKeyStore"
     const val ERROR_USER_INFO_KEY = "error"
+
+    /**
+     * Exception used internally to propagate a [ModuleException] to the caller
+     * which is in charge of rejecting the promise.
+     * @property type the [ModuleException] to reject the promise with.
+     */
+    private class ModuleError(val type: ModuleException) : Exception(type.ex.message)
 
     /**
      * Custom exceptions related to failure points.
