@@ -2547,6 +2547,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@pagopa/io-react-native-crypto@npm:^1.2.5":
+  version: 1.2.5
+  resolution: "@pagopa/io-react-native-crypto@npm:1.2.5"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 33255ee4614fc7a77491bc1b60af4b9b33cd59ae8f35f1e04878dee20fc1676335c5240a22f6de1510549d7f600c7614e56d5587ac95a92a17ffdd2e1911b731
+  languageName: node
+  linkType: hard
+
 "@pagopa/io-react-native-integrity-backend@workspace:backend":
   version: 0.0.0-use.local
   resolution: "@pagopa/io-react-native-integrity-backend@workspace:backend"
@@ -2581,6 +2591,7 @@ __metadata:
     "@babel/core": ^7.20.0
     "@babel/preset-env": ^7.20.0
     "@babel/runtime": ^7.20.0
+    "@pagopa/io-react-native-crypto": ^1.2.5
     "@react-native/babel-preset": 0.73.21
     "@react-native/metro-config": 0.73.5
     "@react-native/typescript-config": 0.73.1

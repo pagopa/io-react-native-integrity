@@ -2,13 +2,42 @@ import * as React from 'react';
 import { StyleSheet, SafeAreaView, Text, ScrollView, View } from 'react-native';
 import {
   getAttestation,
+  getAttestationAssertion,
+  getHardwareAttestationCapabilities,
   isPlayServicesAvailable,
   prepareIntegrityToken,
   requestIntegrityToken,
+  type HardwareAttestationCapabilities,
 } from '@pagopa/io-react-native-integrity';
+import { sign } from '@pagopa/io-react-native-crypto';
+import { sha256 } from 'react-native-sha256';
 import ButtonWithLoader from './components/ButtonWithLoader';
 import { BACKEND_ADDRESS, GOOGLE_CLOUD_PROJECT_NUMBER } from '@env';
 import uuid from 'react-native-uuid';
+
+/**
+ * Posts a JSON body to the example backend.
+ */
+const postToBackend = async (path: string, body: object) => {
+  const result = await fetch(`${BACKEND_ADDRESS}${path}`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  return result.json();
+};
+
+/**
+ * Gets a single use challenge from the example backend.
+ */
+const getNonce = async (): Promise<string> => {
+  const result = await fetch(`${BACKEND_ADDRESS}/android/nonce`);
+  const { nonce } = await result.json();
+  return nonce;
+};
 
 export default function AndroidApp() {
   const [isServiceAvailable, setIsServiceAvailable] =
@@ -24,8 +53,16 @@ export default function AndroidApp() {
     React.useState<boolean>(false);
   const [isGetAttestationLoading, setIsGetAttestationLoading] =
     React.useState<boolean>(false);
-  const [attestation, setAttestation] = React.useState<string | undefined>();
+  const [attestation, setAttestation] = React.useState<
+    | { attestation: string; challenge: string; hardwareKeyTag: string }
+    | undefined
+  >();
   const [isVerifyAttestationLoading, setIsVerifyAttestationLoading] =
+    React.useState<boolean>(false);
+  const [capabilities, setCapabilities] = React.useState<
+    HardwareAttestationCapabilities | undefined
+  >();
+  const [isVerifyAssertionLoading, setIsVerifyAssertionLoading] =
     React.useState<boolean>(false);
 
   const [debugLog, setDebugLog] = React.useState<string>('.. >');
@@ -37,6 +74,14 @@ export default function AndroidApp() {
       })
       .catch((error) => {
         setDebugLog(error);
+      });
+    getHardwareAttestationCapabilities()
+      .then((result) => {
+        setCapabilities(result);
+        setDebugLog(JSON.stringify(result));
+      })
+      .catch((error) => {
+        setDebugLog(JSON.stringify(error));
       });
   }, []);
 
@@ -71,9 +116,10 @@ export default function AndroidApp() {
   const requestAttestation = async () => {
     try {
       setIsGetAttestationLoading(true);
-      const hardwareKeyTag = uuid.v4();
-      const att = await getAttestation('randomvalue', hardwareKeyTag);
-      setAttestation(att);
+      const hardwareKeyTag = uuid.v4().toString();
+      const challenge = await getNonce();
+      const att = await getAttestation(challenge, hardwareKeyTag);
+      setAttestation({ attestation: att, challenge, hardwareKeyTag });
       setIsGetAttestationLoading(false);
       setDebugLog(att);
     } catch (e) {
@@ -122,24 +168,53 @@ export default function AndroidApp() {
         return;
       }
       setIsVerifyAttestationLoading(true);
-      const result = await fetch(
-        `${BACKEND_ADDRESS}/android/verifyAttestation`,
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            attestation,
-          }),
-        }
+      const response = await postToBackend(
+        '/android/verifyAttestation',
+        attestation
       );
-      const response = await result.json();
       setIsVerifyAttestationLoading(false);
       setDebugLog(JSON.stringify(response));
     } catch (e) {
       setIsVerifyAttestationLoading(false);
+      setDebugLog(`${e}`);
+    }
+  };
+
+  /**
+   * Sends both the Play Integrity token, when available, and a fresh key attestation
+   * along with the client data signed by the attested hardware key.
+   * The backend accepts the Play Integrity verdict or, as fallback, the key attestation.
+   * Play Integrity requires the "Prepare" step to be completed first.
+   */
+  const verifyAssertion = async () => {
+    try {
+      if (attestation === undefined) {
+        setDebugLog(
+          'Attestation is undefined, please call get and verify attestation first.'
+        );
+        return;
+      }
+      setIsVerifyAssertionLoading(true);
+      const clientData = JSON.stringify({ challenge: await getNonce() });
+      const clientDataHash = await sha256(clientData);
+      const signature = await sign(clientData, attestation.hardwareKeyTag);
+      const assertionIntegrityToken = isServiceAvailable
+        ? await requestIntegrityToken(clientDataHash).catch(() => undefined)
+        : undefined;
+      const attestationAssertion = capabilities?.isHardwareAttestationSupported
+        ? await getAttestationAssertion(clientDataHash)
+        : undefined;
+      const response = await postToBackend('/android/verifyAssertion', {
+        hardwareKeyTag: attestation.hardwareKeyTag,
+        clientData,
+        signature,
+        integrityToken: assertionIntegrityToken,
+        attestationAssertion,
+      });
+      setIsVerifyAssertionLoading(false);
+      setDebugLog(JSON.stringify(response));
+    } catch (e) {
+      setIsVerifyAssertionLoading(false);
       setDebugLog(`${e}`);
     }
   };
@@ -169,6 +244,10 @@ export default function AndroidApp() {
               loading={isVerifyintegrityTokenLoading}
             />
             <View style={styles.spacer} />
+          </>
+        ) : null}
+        {capabilities?.isHardwareAttestationSupported ? (
+          <>
             <Text style={styles.h2}>Key Attestation</Text>
             <ButtonWithLoader
               title="Get attestation"
@@ -180,6 +259,13 @@ export default function AndroidApp() {
               title="Verify attestation"
               onPress={() => verifyAttestation()}
               loading={isVerifyAttestationLoading}
+            />
+            <View style={styles.spacer} />
+            <Text style={styles.h2}>Integrity Assertion</Text>
+            <ButtonWithLoader
+              title="Verify assertion"
+              onPress={() => verifyAssertion()}
+              loading={isVerifyAssertionLoading}
             />
             <View style={styles.spacer} />
           </>
