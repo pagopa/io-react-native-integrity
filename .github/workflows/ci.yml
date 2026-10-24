@@ -35,6 +35,9 @@ jobs:
       - name: Run unit tests
         run: yarn test --maxWorkers=2 --coverage
 
+      - name: Run backend unit tests
+        run: yarn backend test
+
   build-library:
     runs-on: ubuntu-latest
     steps:
