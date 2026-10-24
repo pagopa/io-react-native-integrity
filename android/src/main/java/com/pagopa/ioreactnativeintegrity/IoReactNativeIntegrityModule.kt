@@ -1,5 +1,6 @@
 package com.pagopa.ioreactnativeintegrity
 
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
@@ -82,15 +83,104 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    */
   @ReactMethod
   fun isPlayServicesAvailable(promise: Promise) {
+    promise.resolve(checkPlayServicesAvailability())
+  }
+
+  /**
+   * Checks whether or not Google Play Services is available on the device.
+   * See [isPlayServicesAvailable] for the mapping of the status codes.
+   * @return true if Google Play Services is available, false otherwise.
+   */
+  private fun checkPlayServicesAvailability(): Boolean {
     val status =
       GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(reactApplicationContext)
-    val isAvailable = status in listOf(
+    return status in listOf(
       ConnectionResult.SUCCESS,
       ConnectionResult.SERVICE_UPDATING,
       ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED
     )
-    promise.resolve(isAvailable)
   }
+
+  /**
+   * Function which returns a resolved promise with the hardware attestation capabilities of the device.
+   * The resolved map contains:
+   * - sdkInt: the SDK version of the running OS;
+   * - firstApiLevel: the SDK version the device has been launched with, see [getFirstApiLevel];
+   * - isHardwareAttestationSupported: true if the device has been launched with Android 8.0 (API 26)
+   * or later, when [hardware attestation](https://developer.android.com/privacy-and-security/security-key-attestation)
+   * became a mandatory feature. Devices launched with older versions are not considered reliable;
+   * - hasStrongBox: true if the device has a StrongBox Keymaster;
+   * - hasAttestKey: true if the device supports app attest keys (API 31+);
+   * - isPlayServicesAvailable: same result of [isPlayServicesAvailable].
+   * This check is not a security check and it is meant to choose which integrity proofs to produce.
+   * @param promise the React Native promise to be resolved.
+   */
+  @ReactMethod
+  fun getHardwareAttestationCapabilities(promise: Promise) {
+    val packageManager = reactApplicationContext.packageManager
+    val firstApiLevel = getFirstApiLevel()
+    val capabilities = WritableNativeMap().apply {
+      putInt("sdkInt", Build.VERSION.SDK_INT)
+      putInt("firstApiLevel", firstApiLevel)
+      putBoolean("isHardwareAttestationSupported", isHardwareAttestationSupported(firstApiLevel))
+      putBoolean(
+        "hasStrongBox",
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && packageManager.hasSystemFeature(
+          PackageManager.FEATURE_STRONGBOX_KEYSTORE
+        )
+      )
+      putBoolean(
+        "hasAttestKey",
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && packageManager.hasSystemFeature(
+          PackageManager.FEATURE_KEYSTORE_APP_ATTEST_KEY
+        )
+      )
+      putBoolean("isPlayServicesAvailable", checkPlayServicesAvailability())
+    }
+    promise.resolve(capabilities)
+  }
+
+  /**
+   * Gets the SDK version the device has been launched with, which corresponds to the
+   * `ro.product.first_api_level` system property.
+   * From [Build.VERSION_CODES.S] it is exposed by [Build.VERSION.DEVICE_INITIAL_SDK_INT], while on older
+   * versions the system property is read on a best effort basis as it is not part of the public SDK.
+   * When the property is not set the device has been launched with the running OS version, thus
+   * [Build.VERSION.SDK_INT] is returned, which is also used as fallback when the property can't be read.
+   * @return the SDK version the device has been launched with.
+   */
+  private fun getFirstApiLevel(): Int {
+    val firstApiLevel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      Build.VERSION.DEVICE_INITIAL_SDK_INT
+    } else {
+      readSystemProperty(FIRST_API_LEVEL_PROPERTY)?.toIntOrNull() ?: 0
+    }
+    return if (firstApiLevel > 0) firstApiLevel else Build.VERSION.SDK_INT
+  }
+
+  /**
+   * Reads a system property via reflection.
+   * @param name the name of the system property.
+   * @return the value of the property or null if it can't be read.
+   */
+  @SuppressLint("PrivateApi")
+  private fun readSystemProperty(name: String): String? {
+    return try {
+      Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
+        .invoke(null, name) as? String
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  /**
+   * Checks whether or not the device supports hardware attestation, which is a mandatory feature
+   * for devices launched with Android 8.0 (API 26) or later.
+   * @param firstApiLevel the SDK version the device has been launched with, see [getFirstApiLevel].
+   * @return true if hardware attestation is supported, false otherwise.
+   */
+  private fun isHardwareAttestationSupported(firstApiLevel: Int) =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && firstApiLevel > Build.VERSION_CODES.N_MR1
 
   /**
    * Preparation step for a [Play Integrity standard API request](https://developer.android.com/google/play/integrity/standard).
@@ -360,6 +450,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     const val NAME = "IoReactNativeIntegrity"
     const val KEYSTORE_PROVIDER = "AndroidKeyStore"
     const val ERROR_USER_INFO_KEY = "error"
+    const val FIRST_API_LEVEL_PROPERTY = "ro.product.first_api_level"
 
     /**
      * Exception used internally to propagate a [ModuleException] to the caller

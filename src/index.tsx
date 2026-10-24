@@ -55,6 +55,26 @@ export type DecodedAttestation = {
 };
 
 /**
+ * ANDROID ONLY
+ * Hardware attestation capabilities of the device.
+ * They are not a security check and are meant to choose which integrity proofs to produce.
+ */
+export type HardwareAttestationCapabilities = {
+  /** The SDK version of the running OS. */
+  sdkInt: number;
+  /** The SDK version the device has been launched with (`ro.product.first_api_level`). */
+  firstApiLevel: number;
+  /** True if the device has been launched with Android 8.0 (API 26) or later. */
+  isHardwareAttestationSupported: boolean;
+  /** True if the device has a StrongBox Keymaster. */
+  hasStrongBox: boolean;
+  /** True if the device supports app attest keys (API 31+). */
+  hasAttestKey: boolean;
+  /** True if Google Play Services is available, see {@link isPlayServicesAvailable}. */
+  isPlayServicesAvailable: boolean;
+};
+
+/**
  * Error when the platform is not supported.
  */
 const IntegrityErrorUnsupportedError: IntegrityError = {
@@ -228,6 +248,20 @@ export function prepareIntegrityToken(
 export function requestIntegrityToken(requestHash?: string): Promise<string> {
   return Platform.select({
     android: () => IoReactNativeIntegrity.requestIntegrityToken(requestHash),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
+}
+
+/**
+ * ANDROID ONLY
+ * Gets the hardware attestation capabilities of the device.
+ * Hardware attestation is considered supported when the device has been launched with
+ * Android 8.0 (API 26) or later, as it is a mandatory feature since then.
+ * @returns a promise resolved with the {@link HardwareAttestationCapabilities} of the device.
+ */
+export function getHardwareAttestationCapabilities(): Promise<HardwareAttestationCapabilities> {
+  return Platform.select({
+    android: () => IoReactNativeIntegrity.getHardwareAttestationCapabilities(),
     default: () => Promise.reject(IntegrityErrorUnsupportedError),
   })();
 }
