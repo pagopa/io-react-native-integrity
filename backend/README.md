@@ -37,6 +37,43 @@ GOOGLE_APPLICATION_CREDENTIALS =
 
 `GOOGLE_APPLICATION_CREDENTIALS` consists of a JSON string with the service account credentials. Refer to the [instructions](https://developer.android.com/google/play/integrity/standard#decrypt-and) for more information.
 
+### Key attestation and GrapheneOS
+
+The key attestation verification (`/android/verifyAttestation`) and the integrity assertion verification (`/android/verifyAssertion`) follow the [GrapheneOS attestation compatibility guide](https://grapheneos.org/articles/attestation-compatibility-guide):
+
+- the chain must be rooted at one of the Google Hardware Attestation Root CAs and none of its certificates must be revoked;
+- the attestation must be hardware backed, with the expected challenge, package name and, when configured, app signing certificate digest;
+- the bootloader must be locked;
+- the verified boot state must be `Verified` (stock OS) or `SelfSigned` with a verified boot key included in the GrapheneOS allowlist;
+- no patch level is enforced.
+
+The assertion is accepted when the client data is signed with the registered hardware key and either the Play Integrity verdict is valid or, as fallback, the fresh key attestation satisfies the policy above with the SHA-256 hex digest of the client data as challenge and the same verified boot state and key of the registration.
+
+The GrapheneOS allowlist is downloaded from [attestation.json](https://grapheneos.org/attestation.json) and accepted only if its [signature](https://grapheneos.org/attestation.json.sig) has been made by the pinned GrapheneOS key with the `attestation keys` namespace and its timestamp is not older than the accepted one. It is refreshed every 24 hours. A snapshot of the keys published in the guide is used until a signed list is available.
+
+The following optional environment variables can be set in the `.env` file:
+
+```javascript
+ANDROID_SIGNATURE_DIGESTS =
+ANDROID_REQUIRE_PLAY_RECOGNIZED =
+GRAPHENEOS_ALLOWED_SIGNERS =
+GRAPHENEOS_ALLOWLIST_CACHE_FILE =
+```
+
+`ANDROID_SIGNATURE_DIGESTS` is a comma separated list of the SHA-256 digests (hex) of the app signing certificates. It is required to accept devices running GrapheneOS, since the Play Integrity app recognition verdict is not available for them.
+
+`ANDROID_REQUIRE_PLAY_RECOGNIZED` set to `true` requires the `PLAY_RECOGNIZED` Play Integrity app verdict, which is only returned for apps distributed through Google Play.
+
+`GRAPHENEOS_ALLOWED_SIGNERS` is the content of the GrapheneOS [allowed_signers](https://grapheneos.org/allowed_signers) file. Verify it out of band (GrapheneOS also publishes it on its official GitHub, X and Bluesky accounts) before pinning it. When it is not set only the bundled snapshot is used.
+
+`GRAPHENEOS_ALLOWLIST_CACHE_FILE` is a file where the last verified list is persisted across restarts.
+
+## Run the tests
+
+```bash
+$ yarn test
+```
+
 ## Run the app
 
 ```bash
