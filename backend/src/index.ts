@@ -140,11 +140,7 @@ app.listen(port, () => {
     console.warn(
       '[server] ANDROID_SIGNATURE_DIGESTS is not set in .env, devices running GrapheneOS will be rejected'
     );
-  if (!process.env.GRAPHENEOS_ALLOWED_SIGNERS)
-    console.warn(
-      '[server] GRAPHENEOS_ALLOWED_SIGNERS is not set in .env, only the bundled GrapheneOS keys snapshot will be used'
-    );
-  else getGrapheneOsAllowlist().startAutoRefresh();
+  getGrapheneOsAllowlist().startAutoRefresh();
   if (!BUNDLE_IDENTIFIER)
     console.warn('[server] BUNDLE_IDENTIFIER is not set in .env');
   if (!TEAM_IDENTIFIER)

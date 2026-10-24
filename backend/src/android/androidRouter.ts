@@ -25,8 +25,8 @@ let grapheneOsAllowlist: GrapheneOsAllowlist | undefined;
 
 /**
  * Gets the GrapheneOS allowlist, creating it on the first call so that the .env file has been loaded.
- * GRAPHENEOS_ALLOWED_SIGNERS must contain the pinned GrapheneOS allowed_signers file to verify the signed list,
- * otherwise only the bundled snapshot is used. GRAPHENEOS_ALLOWLIST_CACHE_FILE is optional.
+ * GRAPHENEOS_ALLOWED_SIGNERS optionally overrides the pinned GrapheneOS allowed_signers,
+ * e.g. after a key rotation. GRAPHENEOS_ALLOWLIST_CACHE_FILE is optional.
  * @returns the {@link GrapheneOsAllowlist}.
  */
 export const getGrapheneOsAllowlist = () => {

@@ -64,7 +64,7 @@ GRAPHENEOS_ALLOWLIST_CACHE_FILE =
 
 `ANDROID_REQUIRE_PLAY_RECOGNIZED` set to `true` requires the `PLAY_RECOGNIZED` Play Integrity app verdict, which is only returned for apps distributed through Google Play.
 
-`GRAPHENEOS_ALLOWED_SIGNERS` is the content of the GrapheneOS [allowed_signers](https://grapheneos.org/allowed_signers) file. Verify it out of band (GrapheneOS also publishes it on its official GitHub, X and Bluesky accounts) before pinning it. When it is not set only the bundled snapshot is used.
+`GRAPHENEOS_ALLOWED_SIGNERS` optionally overrides the pinned GrapheneOS [allowed_signers](https://grapheneos.org/allowed_signers) (`GRAPHENEOS_ALLOWED_SIGNERS` in `src/android/grapheneosAllowlist.ts`, verified against the copy published on the [GrapheneOS GitHub repository](https://github.com/GrapheneOS/grapheneos.org/blob/main/static/allowed_signers)). When GrapheneOS rotates its key, the new file is signed with the previous key at https://grapheneos.org/allowed_signers.sig: verify it before updating the pinned value.
 
 `GRAPHENEOS_ALLOWLIST_CACHE_FILE` is a file where the last verified list is persisted across restarts.
 

@@ -9,3 +9,6 @@
   They are copied from the `testdata` of the [Android Key Attestation Verifier](https://github.com/android/keyattestation)
   (`caiman/sdk36/TEE_EC_RKP.pem` and `tegu/sdk36/SB_EC_2026_ROOT.pem`), Copyright Google LLC,
   licensed under the Apache License 2.0.
+- `grapheneos-allowed_signers`, `grapheneos-attestation.json` and `grapheneos-attestation.json.sig` are the real
+  files published by GrapheneOS, copied from https://github.com/GrapheneOS/grapheneos.org/tree/main/static
+  (commit 5f0ab48812ab0f307dc2763e996c6d6be6fc47b9).

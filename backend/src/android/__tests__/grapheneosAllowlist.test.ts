@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
+  GRAPHENEOS_ALLOWED_SIGNERS,
   GRAPHENEOS_ALLOWLIST_SNAPSHOT,
   GrapheneOsAllowlist,
 } from '../grapheneosAllowlist';
@@ -145,12 +146,33 @@ describe('GrapheneOsAllowlist', () => {
     assert.equal(allowlist.getTimestamp(), 0);
   });
 
-  it('refuses signed lists when the allowed signers are not configured', () => {
+  it('verifies the real list signed by GrapheneOS with the pinned key', () => {
+    const allowlist = new GrapheneOsAllowlist();
+    allowlist.apply(
+      readFixture('grapheneos-attestation.json'),
+      readFixture('grapheneos-attestation.json.sig')
+    );
+    assert.equal(allowlist.getTimestamp(), 1776709772);
+    assert.deepEqual(
+      [...allowlist.getKeys()].sort(),
+      [...GRAPHENEOS_ALLOWLIST_SNAPSHOT.verifiedBootKeys].sort()
+    );
+  });
+
+  it('pins the GrapheneOS allowed_signers published by GrapheneOS', () => {
+    assert.equal(
+      GRAPHENEOS_ALLOWED_SIGNERS,
+      readFixture('grapheneos-allowed_signers').trim()
+    );
+  });
+
+  it('rejects a list which is not signed by the pinned GrapheneOS key', () => {
     const allowlist = new GrapheneOsAllowlist();
     assert.throws(
       () => allowlist.apply(ATTESTATION_JSON, ATTESTATION_SIG),
-      /allowed signers are not configured/
+      /not been made by an allowed signer/
     );
+    assert.equal(allowlist.getTimestamp(), 0);
   });
 
   it('refreshes from the network and persists the verified list', async () => {

@@ -13,6 +13,15 @@ const GRAPHENEOS_SIGNER_PRINCIPAL = 'contact@grapheneos.org';
 const GRAPHENEOS_SIGNATURE_NAMESPACE = 'attestation keys';
 
 /**
+ * Pinned GrapheneOS allowed_signers, published at https://grapheneos.org/allowed_signers and
+ * https://github.com/GrapheneOS/grapheneos.org/blob/main/static/allowed_signers (verified on 2026-10-24).
+ * When GrapheneOS rotates the key, the new allowed_signers is signed with the previous key
+ * (https://grapheneos.org/allowed_signers.sig) and this value must be updated after verifying it.
+ */
+export const GRAPHENEOS_ALLOWED_SIGNERS =
+  'contact@grapheneos.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIUg/m5CoP83b0rfSCzYSVA4cw4ir49io5GPoxbgxdJE';
+
+/**
  * Snapshot of the GrapheneOS verified boot key fingerprints published in the attestation compatibility
  * guide on 2026-10-23. It is only used as initial "last known good" list until the signed list is
  * downloaded and verified, its timestamp is 0 so that any signed list replaces it.
@@ -47,8 +56,7 @@ export const GRAPHENEOS_ALLOWLIST_SNAPSHOT = {
 export type GrapheneOsAllowlistOptions = {
   /**
    * Content of the GrapheneOS allowed_signers file (https://grapheneos.org/allowed_signers),
-   * which must be pinned in the configuration after being verified out of band.
-   * When missing the signed list can't be verified and only the snapshot is used.
+   * {@link GRAPHENEOS_ALLOWED_SIGNERS} by default.
    */
   allowedSigners?: string;
   /** Optional file used to persist the last verified list and signature across restarts. */
@@ -132,10 +140,8 @@ export class GrapheneOsAllowlist {
    * @throws {Error} - If the signature is invalid, the file is malformed or older than the accepted one.
    */
   apply(json: string, signature: string) {
-    const { allowedSigners } = this.options;
-    if (!allowedSigners) {
-      throw new Error('The GrapheneOS allowed signers are not configured');
-    }
+    const allowedSigners =
+      this.options.allowedSigners ?? GRAPHENEOS_ALLOWED_SIGNERS;
     verifySshSignature({
       message: Buffer.from(json, 'utf-8'),
       armoredSignature: signature,
@@ -193,8 +199,8 @@ export class GrapheneOsAllowlist {
   }
 
   private loadCache() {
-    const { cacheFile, allowedSigners } = this.options;
-    if (!cacheFile || !allowedSigners || !fs.existsSync(cacheFile)) return;
+    const { cacheFile } = this.options;
+    if (!cacheFile || !fs.existsSync(cacheFile)) return;
     try {
       const { json, signature } = JSON.parse(
         fs.readFileSync(cacheFile, 'utf-8')
