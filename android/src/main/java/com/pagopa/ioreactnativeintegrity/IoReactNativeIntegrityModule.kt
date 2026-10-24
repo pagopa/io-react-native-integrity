@@ -31,6 +31,7 @@ import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.spec.ECGenParameterSpec
+import java.util.UUID
 
 /**
  * React Native bridge for Google Play Integrity API and key attestation.
@@ -438,6 +439,60 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   }
 
   /**
+   * Generates a fresh [Key Attestation](https://developer.android.com/privacy-and-security/security-key-attestation)
+   * to be sent along with each integrity assertion, alongside the Play Integrity token when available.
+   * It allows the backend to verify the current state of the device (e.g. a locked bootloader running
+   * the stock OS or an allowed OS such as GrapheneOS) even when Play Integrity is not available or fails.
+   * A temporary key pair is generated with the provided [challenge] included in its attestation extension,
+   * then its certificate chain is returned and the key pair is deleted.
+   * The chain has the same format of the one returned by [getAttestation].
+   * The promise is resolved with the chain or rejected when:
+   * - The device doesn't support hardware attestation, see [getHardwareAttestationCapabilities];
+   * - The generated key pair is not hardware backed;
+   * - The [challenge] exceeds the size of 128 bytes;
+   * - The key attestation generation fails.
+   * @param challenge the challenge to be included which has a max size of 128 bytes, e.g. the
+   * SHA-256 hex digest of the client data which is also used as Play Integrity request hash.
+   * @param promise the React Native promise to be resolved or rejected.
+   */
+  @ReactMethod
+  fun getAttestationAssertion(challenge: String, promise: Promise) {
+    Thread {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || !isHardwareAttestationSupported(
+          getFirstApiLevel()
+        )
+      ) {
+        ModuleException.HARDWARE_ATTESTATION_NOT_SUPPORTED.reject(promise)
+        return@Thread
+      }
+      val keyAlias = ASSERTION_KEY_ALIAS_PREFIX + UUID.randomUUID().toString()
+      try {
+        promise.resolve(generateEncodedAttestation(keyAlias, challenge.toByteArray()))
+      } catch (e: ModuleError) {
+        e.type.reject(promise)
+      } catch (e: Exception) {
+        ModuleException.ATTESTATION_ASSERTION_FAILED.reject(
+          promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
+        )
+      } finally {
+        deleteKeyQuietly(keyAlias)
+      }
+    }.start()
+  }
+
+  /**
+   * Deletes a key pair from the [keyStore] ignoring any error.
+   * @param keyAlias the alias of the key pair to delete.
+   */
+  private fun deleteKeyQuietly(keyAlias: String) {
+    try {
+      keyStore?.deleteEntry(keyAlias)
+    } catch (e: Exception) {
+      Log.w(name, "Unable to delete the key pair $keyAlias", e)
+    }
+  }
+
+  /**
    * Extracts a message from an [Exception] with an empty string as fallback.
    * @param e an exception.
    * @return [e] message field or an empty string otherwise.
@@ -451,6 +506,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     const val KEYSTORE_PROVIDER = "AndroidKeyStore"
     const val ERROR_USER_INFO_KEY = "error"
     const val FIRST_API_LEVEL_PROPERTY = "ro.product.first_api_level"
+    const val ASSERTION_KEY_ALIAS_PREFIX = "io_integrity_assertion_"
 
     /**
      * Exception used internally to propagate a [ModuleException] to the caller
@@ -477,7 +533,10 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       KEY_IS_NOT_HARDWARE_BACKED(Exception("KEY_IS_NOT_HARDWARE_BACKED")), UNSUPPORTED_DEVICE(
         Exception("UNSUPPORTED_DEVICE")
       ),
-      KEY_ALREADY_EXISTS(Exception("KEY_ALREADY_EXISTS")), KEYSTORE_NOT_INITIALIZED(Exception("KEYSTORE_NOT_INITIALIZED"));
+      KEY_ALREADY_EXISTS(Exception("KEY_ALREADY_EXISTS")), KEYSTORE_NOT_INITIALIZED(Exception("KEYSTORE_NOT_INITIALIZED")),
+      HARDWARE_ATTESTATION_NOT_SUPPORTED(Exception("HARDWARE_ATTESTATION_NOT_SUPPORTED")), ATTESTATION_ASSERTION_FAILED(
+        Exception("ATTESTATION_ASSERTION_FAILED")
+      );
 
       /**
        * Rejects the provided promise with the appropriate error message and additional data.

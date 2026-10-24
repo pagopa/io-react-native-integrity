@@ -12,7 +12,10 @@ type IntegrityErrorCodesAndroid =
   | 'REQUEST_ATTESTATION_FAILED'
   | 'KEY_IS_NOT_HARDWARE_BACKED'
   | 'UNSUPPORTED_DEVICE'
-  | 'KEYSTORE_NOT_INITIALIZED';
+  | 'KEY_ALREADY_EXISTS'
+  | 'KEYSTORE_NOT_INITIALIZED'
+  | 'HARDWARE_ATTESTATION_NOT_SUPPORTED'
+  | 'ATTESTATION_ASSERTION_FAILED';
 
 /**
  * Error codes returned by the iOS module.
@@ -262,6 +265,28 @@ export function requestIntegrityToken(requestHash?: string): Promise<string> {
 export function getHardwareAttestationCapabilities(): Promise<HardwareAttestationCapabilities> {
   return Platform.select({
     android: () => IoReactNativeIntegrity.getHardwareAttestationCapabilities(),
+    default: () => Promise.reject(IntegrityErrorUnsupportedError),
+  })();
+}
+
+/**
+ * ANDROID ONLY
+ * Generates a fresh [Key Attestation](https://developer.android.com/privacy-and-security/security-key-attestation)
+ * to be sent along with each integrity assertion, alongside the Play Integrity token when available.
+ * It allows the backend to verify the current state of the device even when Play Integrity is not available
+ * or fails, e.g. on devices running GrapheneOS with a locked bootloader.
+ * A temporary hardware backed key pair is generated with the provided challenge, its certificate chain
+ * is returned and the key pair is deleted. The chain has the same format of the one returned by {@link getAttestation}.
+ * @param challenge the challenge to be included in the attestation, max 128 bytes (e.g. the SHA-256 hex digest
+ * of the client data which is also used as request hash for {@link requestIntegrityToken}).
+ * @returns a resolved promise with the encoded certificate chain, rejected otherwise when:
+ * - The device doesn't support hardware attestation, see {@link getHardwareAttestationCapabilities};
+ * - The generated key pair is not hardware backed;
+ * - The key attestation generation fails.
+ */
+export function getAttestationAssertion(challenge: string): Promise<string> {
+  return Platform.select({
+    android: () => IoReactNativeIntegrity.getAttestationAssertion(challenge),
     default: () => Promise.reject(IntegrityErrorUnsupportedError),
   })();
 }

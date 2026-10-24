@@ -6,6 +6,7 @@ import {
   generateHardwareSignatureWithAssertion,
   isPlayServicesAvailable,
   getHardwareAttestationCapabilities,
+  getAttestationAssertion,
   prepareIntegrityToken,
   requestIntegrityToken,
 } from '..';
@@ -21,6 +22,7 @@ jest.mock('react-native', () => ({
       prepareIntegrityToken: jest.fn(),
       isPlayServicesAvailable: jest.fn(),
       getHardwareAttestationCapabilities: jest.fn(),
+      getAttestationAssertion: jest.fn(),
     },
   },
   Platform: {
@@ -137,6 +139,15 @@ describe('Test integrity check function exposed by main package', () => {
       await getHardwareAttestationCapabilities();
       expect(spy).toHaveBeenCalled();
     });
+
+    it('getAttestationAssertion should be called correctly', async () => {
+      const spy = jest.spyOn(
+        NativeModules.IoReactNativeIntegrity,
+        'getAttestationAssertion'
+      );
+      await getAttestationAssertion('challenge');
+      expect(spy).toHaveBeenCalledWith('challenge');
+    });
   });
 
   describe('Android only functions on iOS', () => {
@@ -145,6 +156,16 @@ describe('Test integrity check function exposed by main package', () => {
         .fn()
         .mockImplementation((options) => options.ios ?? options.default);
       await expect(getHardwareAttestationCapabilities()).rejects.toEqual({
+        message: 'PLATFORM_NOT_SUPPORTED',
+        userInfo: {},
+      });
+    });
+
+    it('getAttestationAssertion should reject with PLATFORM_NOT_SUPPORTED', async () => {
+      Platform.select = jest
+        .fn()
+        .mockImplementation((options) => options.ios ?? options.default);
+      await expect(getAttestationAssertion('challenge')).rejects.toEqual({
         message: 'PLATFORM_NOT_SUPPORTED',
         userInfo: {},
       });
