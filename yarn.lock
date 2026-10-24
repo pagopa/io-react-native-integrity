@@ -2551,6 +2551,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pagopa/io-react-native-integrity-backend@workspace:backend"
   dependencies:
+    "@peculiar/asn1-android": ^2.10.0
+    "@peculiar/asn1-schema": ^2.10.0
     "@types/dotenv": ^8.2.0
     "@types/express": ^4.17.21
     "@types/node": ^20.11.25
@@ -2618,6 +2620,37 @@ __metadata:
     react-native: "*"
   languageName: unknown
   linkType: soft
+
+"@peculiar/asn1-android@npm:^2.10.0":
+  version: 2.11.0
+  resolution: "@peculiar/asn1-android@npm:2.11.0"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.0
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 5cd48ba634f47b52a4081d603fb42e3924518b793200ea5f9f87b5091121d49efc83f23d7a1a55a0dddf6a35c27a4e93376aeda061d8d21684c2042617583ac5
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-schema@npm:^2.10.0, @peculiar/asn1-schema@npm:^2.11.0":
+  version: 2.11.0
+  resolution: "@peculiar/asn1-schema@npm:2.11.0"
+  dependencies:
+    "@peculiar/utils": ^2.0.2
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 7d0657a768dd80aa235f07bbf9734717176146c3b59cf55fa1d0f15348156dda6a5d107564d4711003d9b6888f7f87d0a618564f2369057365c2965ea606afff
+  languageName: node
+  linkType: hard
+
+"@peculiar/utils@npm:^2.0.2":
+  version: 2.0.3
+  resolution: "@peculiar/utils@npm:2.0.3"
+  dependencies:
+    tslib: ^2.8.1
+  checksum: 438d89318c8accaf2ad9365efe11f4d7e0318f0dd0fdabb67768bbb14641c9cf14e84d34e57c58601a24a78f56802ef356f911151c8dbd8a80ae5e3045100800
+  languageName: node
+  linkType: hard
 
 "@pkgjs/parseargs@npm:^0.11.0":
   version: 0.11.0
@@ -4002,6 +4035,17 @@ __metadata:
   version: 2.0.6
   resolution: "asap@npm:2.0.6"
   checksum: b296c92c4b969e973260e47523207cd5769abd27c245a68c26dc7a0fe8053c55bb04360237cb51cab1df52be939da77150ace99ad331fb7fb13b3423ed73ff3d
+  languageName: node
+  linkType: hard
+
+"asn1js@npm:^3.0.10":
+  version: 3.1.0
+  resolution: "asn1js@npm:3.1.0"
+  dependencies:
+    pvtsutils: ^1.3.6
+    pvutils: ^1.2.0
+    tslib: ^2.8.1
+  checksum: 5fee071baca7bf980d3cbbd3fc8481fac56027f39eb5918a6879670f55cdee1cdee092c33920616b73e7f763a453a11e7c9e15c397d1139176f80013662834a9
   languageName: node
   linkType: hard
 
@@ -11243,10 +11287,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pvtsutils@npm:^1.3.6":
+  version: 1.3.6
+  resolution: "pvtsutils@npm:1.3.6"
+  dependencies:
+    tslib: ^2.8.1
+  checksum: 97b023b46d7b95bff004f8340efc465c1d995f35d7e97a2ef2e28d5e160f5ca47b48f42463b6be92b4341452a6b8c555feb2b1eb59ee90b97bd5d6fc86ffb186
+  languageName: node
+  linkType: hard
+
 "pvutils@npm:^1.1.3":
   version: 1.1.3
   resolution: "pvutils@npm:1.1.3"
   checksum: 2ee26a9e5176c348977d6ec00d8ee80bff62f51743b1c5fe8abeeb4c5d29d9959cdfe0ce146707a9e6801bce88190fed3002d720b072dc87d031c692820b44c9
+  languageName: node
+  linkType: hard
+
+"pvutils@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "pvutils@npm:1.2.0"
+  checksum: 83c17ca6cba0c05bc523377afc8b0d604a250168000a4d2a7e0c922cceb37e7afc7d07f3610635a9ff790a1af2c8f18c5625df46ade45e3b1e0f83e8aa075a03
   languageName: node
   linkType: hard
 
@@ -13057,6 +13117,13 @@ __metadata:
   version: 2.6.2
   resolution: "tslib@npm:2.6.2"
   checksum: 329ea56123005922f39642318e3d1f0f8265d1e7fcb92c633e0809521da75eeaca28d2cf96d7248229deb40e5c19adf408259f4b9640afd20d13aecc1430f3ad
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2.8.1":
+  version: 2.8.1
+  resolution: "tslib@npm:2.8.1"
+  checksum: e4aba30e632b8c8902b47587fd13345e2827fa639e7c3121074d5ee0880723282411a8838f830b55100cbe4517672f84a2472667d355b81e8af165a55dc6203a
   languageName: node
   linkType: hard
 

@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import verifyAttestation from './verifyAttestation';
 import bodyParser from 'body-parser';
 import verifyAssertion from './verifyAssertion';
-import androidRouter from './android/androidRouter';
+import androidRouter, { getGrapheneOsAllowlist } from './android/androidRouter';
 
 dotenv.config();
 const app = express();
@@ -136,6 +136,15 @@ app.listen(port, () => {
   }
   if (!ANDROID_BUNDLE_IDENTIFIER)
     console.warn('[server] ANDROID_BUNDLE_IDENTIFIER is not set in .env');
+  if (!process.env.ANDROID_SIGNATURE_DIGESTS)
+    console.warn(
+      '[server] ANDROID_SIGNATURE_DIGESTS is not set in .env, devices running GrapheneOS will be rejected'
+    );
+  if (!process.env.GRAPHENEOS_ALLOWED_SIGNERS)
+    console.warn(
+      '[server] GRAPHENEOS_ALLOWED_SIGNERS is not set in .env, only the bundled GrapheneOS keys snapshot will be used'
+    );
+  else getGrapheneOsAllowlist().startAutoRefresh();
   if (!BUNDLE_IDENTIFIER)
     console.warn('[server] BUNDLE_IDENTIFIER is not set in .env');
   if (!TEAM_IDENTIFIER)
