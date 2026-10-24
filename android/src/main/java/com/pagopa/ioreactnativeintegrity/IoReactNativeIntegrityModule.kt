@@ -118,24 +118,13 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    */
   @ReactMethod
   fun getHardwareAttestationCapabilities(promise: Promise) {
-    val packageManager = reactApplicationContext.packageManager
     val firstApiLevel = getFirstApiLevel()
     val capabilities = WritableNativeMap().apply {
       putInt("sdkInt", Build.VERSION.SDK_INT)
       putInt("firstApiLevel", firstApiLevel)
       putBoolean("isHardwareAttestationSupported", isHardwareAttestationSupported(firstApiLevel))
-      putBoolean(
-        "hasStrongBox",
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && packageManager.hasSystemFeature(
-          PackageManager.FEATURE_STRONGBOX_KEYSTORE
-        )
-      )
-      putBoolean(
-        "hasAttestKey",
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && packageManager.hasSystemFeature(
-          PackageManager.FEATURE_KEYSTORE_APP_ATTEST_KEY
-        )
-      )
+      putBoolean("hasStrongBox", hasStrongBox())
+      putBoolean("hasAttestKey", hasAttestKey())
       putBoolean("isPlayServicesAvailable", checkPlayServicesAvailability())
     }
     promise.resolve(capabilities)
@@ -283,23 +272,23 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * describes the details of the key's configuration and authorizations, including the
    * [challenge] value.
    * If StrongBox is enabled and the generation fails, the function will retry using TEE.
+   * @param attestKeyAlias the optional alias of the attest key used to sign the attestation, see [generateAttestationKey].
    * @returns the generated key pair.
    */
   @RequiresApi(Build.VERSION_CODES.N)
-  private fun generateAttestationKeyWithFallback(keyAlias: String, challenge: ByteArray): KeyPair {
-    val hasStrongBox =
-      Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && reactApplicationContext.packageManager.hasSystemFeature(
-        PackageManager.FEATURE_STRONGBOX_KEYSTORE
-      )
+  private fun generateAttestationKeyWithFallback(
+    keyAlias: String, challenge: ByteArray, attestKeyAlias: String? = null
+  ): KeyPair {
+    val hasStrongBox = hasStrongBox()
     return try {
       // Generate the attestation key using StrongBox if available
-      generateAttestationKey(keyAlias, challenge, hasStrongBox)
+      generateAttestationKey(keyAlias, challenge, hasStrongBox, attestKeyAlias)
     } catch (e: Exception) {
       // If the generation fails, we can retry the generation using TEE instead of StrongBox
       // If the generation fails again we throw the exception
       if (hasStrongBox) {
         Log.w(name, "StrongBox Key Generation Failed, retrying with TEE")
-        generateAttestationKey(keyAlias, challenge, false)
+        generateAttestationKey(keyAlias, challenge, false, attestKeyAlias)
       } else {
         // If StrongBox has not been used we throw back the error to the caller
         throw Exception("KeyPair Failed Without Fallback", e)
@@ -317,15 +306,25 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * the certificate will be signed by a chain of certificates rooted at a trustworthy CA key.
    * Otherwise the chain will be rooted at an untrusted certificate.
    * @param hasStrongBox indicates whether or not the key pair will be stored using StrongBox.
+   * @param attestKeyAlias the optional alias of an attest key (API 31+) which signs the attestation
+   * certificate instead of the device attestation key. The attest key must have the same security level.
+   * @param purposes the purposes of the key pair, [KeyProperties.PURPOSE_SIGN] by default.
    * @returns the generated key pair.
    */
   @RequiresApi(Build.VERSION_CODES.N)
   private fun generateAttestationKey(
-    keyAlias: String, challenge: ByteArray, hasStrongBox: Boolean
+    keyAlias: String,
+    challenge: ByteArray,
+    hasStrongBox: Boolean,
+    attestKeyAlias: String? = null,
+    purposes: Int = KeyProperties.PURPOSE_SIGN
   ): KeyPair {
-    val builder = KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_SIGN)
+    val builder = KeyGenParameterSpec.Builder(keyAlias, purposes)
       .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1")) // P-256
       .setDigests(KeyProperties.DIGEST_SHA256).setKeySize(256).setAttestationChallenge(challenge)
+    if (attestKeyAlias != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      builder.setAttestKeyAlias(attestKeyAlias)
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && hasStrongBox) {
       builder.setIsStrongBoxBacked(true)
       /**
@@ -367,6 +366,78 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
   private fun keyExists(keyTag: String) = getKeyPair(keyTag) != null
 
   /**
+   * Checks whether or not the device has a StrongBox Keymaster.
+   */
+  private fun hasStrongBox() =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && reactApplicationContext.packageManager.hasSystemFeature(
+      PackageManager.FEATURE_STRONGBOX_KEYSTORE
+    )
+
+  /**
+   * Checks whether or not the device supports app attest keys.
+   */
+  private fun hasAttestKey() =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && reactApplicationContext.packageManager.hasSystemFeature(
+      PackageManager.FEATURE_KEYSTORE_APP_ATTEST_KEY
+    )
+
+  /**
+   * Gets the alias of the attest key associated with a key pair.
+   * @param keyAlias the alias of the key pair.
+   */
+  private fun attestKeyAliasFor(keyAlias: String) = keyAlias + ATTEST_KEY_ALIAS_SUFFIX
+
+  /**
+   * Generates an attest key and a key pair attested by it, both with the same security level.
+   * The attest key allows the backend to pin its public key when the key pair is registered and to
+   * verify that the fresh attestations generated by [getAttestationAssertion] come from the same device,
+   * as only this attest key, which never leaves the secure hardware, can sign them.
+   * If StrongBox is available and the generation fails, the function will retry using TEE.
+   * @param keyAlias the alias of the key pair to generate.
+   * @param challenge the challenge to be included in the attestation of both keys.
+   */
+  @RequiresApi(Build.VERSION_CODES.S)
+  private fun generateAttestationKeyWithAttestKey(keyAlias: String, challenge: ByteArray) {
+    val attestKeyAlias = attestKeyAliasFor(keyAlias)
+    val generate = { strongBox: Boolean ->
+      deleteKeyQuietly(attestKeyAlias)
+      generateAttestationKey(
+        attestKeyAlias, challenge, strongBox, purposes = KeyProperties.PURPOSE_ATTEST_KEY
+      )
+      generateAttestationKey(keyAlias, challenge, strongBox, attestKeyAlias)
+    }
+    val hasStrongBox = hasStrongBox()
+    try {
+      generate(hasStrongBox)
+    } catch (e: Exception) {
+      deleteKeyQuietly(keyAlias)
+      if (!hasStrongBox) {
+        deleteKeyQuietly(attestKeyAlias)
+        throw Exception("KeyPair Failed Without Fallback", e)
+      }
+      Log.w(name, "StrongBox Key Generation Failed, retrying with TEE")
+      try {
+        generate(false)
+      } catch (e: Exception) {
+        deleteKeyQuietly(keyAlias)
+        deleteKeyQuietly(attestKeyAlias)
+        throw e
+      }
+    }
+  }
+
+  /**
+   * Gets the certificate chain of a key pair attested by an attest key: the certificate of the key pair
+   * followed by the certificate chain of the attest key.
+   * @param ks the [KeyStore].
+   * @param keyAlias the alias of the key pair.
+   * @param attestKeyAlias the alias of the attest key.
+   */
+  private fun getChainWithAttestKey(
+    ks: KeyStore, keyAlias: String, attestKeyAlias: String
+  ): Array<Certificate> = arrayOf(ks.getCertificate(keyAlias)) + ks.getCertificateChain(attestKeyAlias)
+
+  /**
    * Generates a hardware backed attestation key pair and returns its certificate chain.
    * @param keyAlias the key alias to generate.
    * @param challenge the challenge to be included in the attestation extension of the leaf certificate.
@@ -375,14 +446,36 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * not hardware backed or with [ModuleException.KEYSTORE_NOT_INITIALIZED] if the [keyStore] is not available.
    */
   @RequiresApi(Build.VERSION_CODES.N)
-  private fun generateEncodedAttestation(keyAlias: String, challenge: ByteArray): String {
-    val keyPair = generateAttestationKeyWithFallback(keyAlias, challenge)
+  private fun generateEncodedAttestation(
+    keyAlias: String, challenge: ByteArray, attestKeyAlias: String? = null
+  ): String {
+    val keyPair = generateAttestationKeyWithFallback(keyAlias, challenge, attestKeyAlias)
+    return encodeHardwareBackedAttestation(keyPair, keyAlias, attestKeyAlias)
+  }
+
+  /**
+   * Returns the certificate chain of a hardware backed key pair.
+   * @param keyPair the generated key pair.
+   * @param keyAlias the alias of the key pair.
+   * @param attestKeyAlias the alias of the attest key which signed the attestation, if any.
+   * @return the certificate chain encoded with [encodeCertificateChain].
+   * @throws ModuleError with [ModuleException.KEY_IS_NOT_HARDWARE_BACKED] if the key is
+   * not hardware backed or with [ModuleException.KEYSTORE_NOT_INITIALIZED] if the [keyStore] is not available.
+   */
+  private fun encodeHardwareBackedAttestation(
+    keyPair: KeyPair, keyAlias: String, attestKeyAlias: String?
+  ): String {
     if (!isKeyHardwareBacked(keyPair.private)) {
       // We check if the key is hardware backed just to be sure exclude software fallback
       throw ModuleError(ModuleException.KEY_IS_NOT_HARDWARE_BACKED)
     }
     val ks = keyStore ?: throw ModuleError(ModuleException.KEYSTORE_NOT_INITIALIZED)
-    return encodeCertificateChain(ks.getCertificateChain(keyAlias))
+    val chain = if (attestKeyAlias != null) {
+      getChainWithAttestKey(ks, keyAlias, attestKeyAlias)
+    } else {
+      ks.getCertificateChain(keyAlias)
+    }
+    return encodeCertificateChain(chain)
   }
 
   /**
@@ -410,12 +503,16 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * - The generated key pair is not hardware backed;
    * - The [challenge] exceeds the size of 128 bytes;
    * - The key attestation generation fails.
+   * When [useAttestKey] is true and the device supports app attest keys (API 31+), the key pair is attested
+   * by a dedicated attest key generated along with it, see [generateAttestationKeyWithAttestKey].
+   * In this case the chain starts with the certificate of the key pair followed by the chain of the attest key.
    * @param challenge the challenge to be included which has a max size of 128 bytes.
    * @param keyAlias key alias for the generated key pair.
+   * @param useAttestKey whether or not to attest the key pair with an attest key when supported.
    * @param promise the React Native promise to be resolved or rejected.
    */
   @ReactMethod
-  fun getAttestation(challenge: String, keyAlias: String, promise: Promise) {
+  fun getAttestation(challenge: String, keyAlias: String, useAttestKey: Boolean, promise: Promise) {
     Thread {
       try {
         // Remove this block if the minSdkVersion is set to 24
@@ -427,7 +524,15 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           ModuleException.KEY_ALREADY_EXISTS.reject(promise)
           return@Thread
         }
-        promise.resolve(generateEncodedAttestation(keyAlias, challenge.toByteArray()))
+        if (useAttestKey && hasAttestKey()) {
+          generateAttestationKeyWithAttestKey(keyAlias, challenge.toByteArray())
+          val keyPair = getKeyPair(keyAlias) ?: throw Exception("Unable to get the generated key pair")
+          promise.resolve(
+            encodeHardwareBackedAttestation(keyPair, keyAlias, attestKeyAliasFor(keyAlias))
+          )
+        } else {
+          promise.resolve(generateEncodedAttestation(keyAlias, challenge.toByteArray()))
+        }
       } catch (e: ModuleError) {
         e.type.reject(promise)
       } catch (e: Exception) {
@@ -446,6 +551,9 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * A temporary key pair is generated with the provided [challenge] included in its attestation extension,
    * then its certificate chain is returned and the key pair is deleted.
    * The chain has the same format of the one returned by [getAttestation].
+   * When [keyAlias] has been generated by [getAttestation] with an attest key, the temporary key pair is
+   * attested by the same attest key, so that the backend can verify that the attestation comes from the
+   * registered device by checking the pinned attest key public key.
    * The promise is resolved with the chain or rejected when:
    * - The device doesn't support hardware attestation, see [getHardwareAttestationCapabilities];
    * - The generated key pair is not hardware backed;
@@ -453,10 +561,11 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * - The key attestation generation fails.
    * @param challenge the challenge to be included which has a max size of 128 bytes, e.g. the
    * SHA-256 hex digest of the client data which is also used as Play Integrity request hash.
+   * @param keyAlias the optional alias of the registered key pair generated by [getAttestation].
    * @param promise the React Native promise to be resolved or rejected.
    */
   @ReactMethod
-  fun getAttestationAssertion(challenge: String, promise: Promise) {
+  fun getAttestationAssertion(challenge: String, keyAlias: String?, promise: Promise) {
     Thread {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || !isHardwareAttestationSupported(
           getFirstApiLevel()
@@ -465,9 +574,13 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
         ModuleException.HARDWARE_ATTESTATION_NOT_SUPPORTED.reject(promise)
         return@Thread
       }
-      val keyAlias = ASSERTION_KEY_ALIAS_PREFIX + UUID.randomUUID().toString()
+      val assertionKeyAlias = ASSERTION_KEY_ALIAS_PREFIX + UUID.randomUUID().toString()
       try {
-        promise.resolve(generateEncodedAttestation(keyAlias, challenge.toByteArray()))
+        val attestKeyAlias = keyAlias?.let { attestKeyAliasFor(it) }
+          ?.takeIf { hasAttestKey() && keyStore?.containsAlias(it) == true }
+        promise.resolve(
+          generateEncodedAttestation(assertionKeyAlias, challenge.toByteArray(), attestKeyAlias)
+        )
       } catch (e: ModuleError) {
         e.type.reject(promise)
       } catch (e: Exception) {
@@ -475,7 +588,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           promise, Pair(ERROR_USER_INFO_KEY, getExceptionMessageOrEmpty(e))
         )
       } finally {
-        deleteKeyQuietly(keyAlias)
+        deleteKeyQuietly(assertionKeyAlias)
       }
     }.start()
   }
@@ -507,6 +620,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
     const val ERROR_USER_INFO_KEY = "error"
     const val FIRST_API_LEVEL_PROPERTY = "ro.product.first_api_level"
     const val ASSERTION_KEY_ALIAS_PREFIX = "io_integrity_assertion_"
+    const val ATTEST_KEY_ALIAS_SUFFIX = "_attest_key"
 
     /**
      * Exception used internally to propagate a [ModuleException] to the caller

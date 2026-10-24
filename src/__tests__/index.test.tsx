@@ -128,7 +128,18 @@ describe('Test integrity check function exposed by main package', () => {
         'getAttestation'
       );
       await getAttestation('challenge', 'hardwareKeyTag');
-      expect(spy).toHaveBeenCalledWith('challenge', 'hardwareKeyTag');
+      expect(spy).toHaveBeenCalledWith('challenge', 'hardwareKeyTag', false);
+    });
+
+    it('getAttestation with an attest key it should be called correctly', async () => {
+      const spy = jest.spyOn(
+        NativeModules.IoReactNativeIntegrity,
+        'getAttestation'
+      );
+      await getAttestation('challenge', 'hardwareKeyTag', {
+        useAttestKey: true,
+      });
+      expect(spy).toHaveBeenCalledWith('challenge', 'hardwareKeyTag', true);
     });
 
     it('getHardwareAttestationCapabilities should be called correctly', async () => {
@@ -146,7 +157,9 @@ describe('Test integrity check function exposed by main package', () => {
         'getAttestationAssertion'
       );
       await getAttestationAssertion('challenge');
-      expect(spy).toHaveBeenCalledWith('challenge');
+      expect(spy).toHaveBeenCalledWith('challenge', null);
+      await getAttestationAssertion('challenge', 'hardwareKeyTag');
+      expect(spy).toHaveBeenCalledWith('challenge', 'hardwareKeyTag');
     });
   });
 
