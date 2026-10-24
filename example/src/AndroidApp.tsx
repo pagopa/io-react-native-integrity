@@ -118,7 +118,9 @@ export default function AndroidApp() {
       setIsGetAttestationLoading(true);
       const hardwareKeyTag = uuid.v4().toString();
       const challenge = await getNonce();
-      const att = await getAttestation(challenge, hardwareKeyTag);
+      const att = await getAttestation(challenge, hardwareKeyTag, {
+        useAttestKey: true,
+      });
       setAttestation({ attestation: att, challenge, hardwareKeyTag });
       setIsGetAttestationLoading(false);
       setDebugLog(att);
@@ -202,7 +204,10 @@ export default function AndroidApp() {
         ? await requestIntegrityToken(clientDataHash).catch(() => undefined)
         : undefined;
       const attestationAssertion = capabilities?.isHardwareAttestationSupported
-        ? await getAttestationAssertion(clientDataHash)
+        ? await getAttestationAssertion(
+            clientDataHash,
+            attestation.hardwareKeyTag
+          )
         : undefined;
       const response = await postToBackend('/android/verifyAssertion', {
         hardwareKeyTag: attestation.hardwareKeyTag,
