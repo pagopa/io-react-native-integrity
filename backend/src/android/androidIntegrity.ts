@@ -21,6 +21,14 @@ const CRL_URL = 'https://android.googleapis.com/attestation/status';
 // Key attestation extension data schema OID
 // https://developer.android.com/privacy-and-security/security-key-attestation#key_attestation_ext_schema
 const KEY_OID = '1.3.6.1.4.1.11129.2.1.17';
+// Public keys of the Google Hardware Attestation Root CAs.
+// The RSA key is used by the factory provisioned chains and the legacy remotely provisioned chains,
+// while the ECDSA key belongs to the "Key Attestation CA1" root used by the newer remotely provisioned chains.
+// https://developer.android.com/privacy-and-security/security-key-attestation#root_certificate
+const GOOGLE_ROOT_PUBLIC_KEY_FILES = [
+  'googleHardwareAttestationRoot.key',
+  'googleHardwareAttestationRootEcdsa.key',
+];
 
 export const playintegrity = google.playintegrity('v1');
 
@@ -113,13 +121,12 @@ const validateIssuance = (x509Chain: X509Certificate[]) => {
     }
   }
 
-  // Ensure that the last certificate in the chain is the expected Google Hardware Attestation Root CA.
-  const pkFile = fs.readFileSync(
-    require('path').resolve(__dirname, 'googleHardwareAttestationRoot.key')
-  );
-  const pk = crypto.createPublicKey(pkFile);
+  // Ensure that the last certificate in the chain is signed by one of the Google Hardware Attestation Root CAs.
   const rootCert = x509Chain[x509Chain.length - 1]; // Last certificate in the chain is the root certificate
-  if (!rootCert || !rootCert.verify(pk)) {
+  if (
+    !rootCert ||
+    !getGoogleRootPublicKeys().some((pk) => isSignedBy(rootCert, pk))
+  ) {
     throw new Error(
       'Root certificate is not signed by Google Hardware Attestation Root CA'
     );
@@ -137,8 +144,13 @@ const validateRevokation = async (x509Chain: X509Certificate[]) => {
   const res = await fetch(CRL_URL, { method: 'GET' });
   if (!res.ok) throw new Error('Failed to fetch CRL');
   const crl = (await res.json()) as CRL; // Add type assertion for crl
+  // The CRL entries are indexed by lowercase hex serial numbers without leading zeros,
+  // while X509Certificate returns uppercase hex serial numbers.
+  const revokedSerials = new Set(
+    Object.keys(crl.entries).map(normalizeSerialNumber)
+  );
   const isExpired = x509Chain.some((cert) => {
-    return cert.serialNumber in crl.entries;
+    return revokedSerials.has(normalizeSerialNumber(cert.serialNumber));
   });
   if (isExpired) throw new Error('Certificate is revoked');
 };
@@ -154,7 +166,8 @@ const validateRevokation = async (x509Chain: X509Certificate[]) => {
  */
 const validateKeyAttestationExtension = (x509Chain: X509Certificate[]) => {
   if (x509Chain.length === 0) throw new Error('No certificates provided');
-  const found = x509Chain.reverse().some((certificate) => {
+  // Iterate from the root to the leaf without mutating the chain
+  const found = [...x509Chain].reverse().some((certificate) => {
     const asn1 = asn1js.fromBER(certificate.raw);
     const parsedCertificate = new pkijs.Certificate({ schema: asn1.result });
     const extension = parsedCertificate.extensions?.find(
@@ -164,6 +177,42 @@ const validateKeyAttestationExtension = (x509Chain: X509Certificate[]) => {
   });
   if (!found) throw new Error('No key attestation extension found');
 };
+
+/**
+ * Loads the public keys of the Google Hardware Attestation Root CAs.
+ * @returns the list of the root public keys.
+ */
+const getGoogleRootPublicKeys = () =>
+  GOOGLE_ROOT_PUBLIC_KEY_FILES.map((file) =>
+    crypto.createPublicKey(
+      fs.readFileSync(require('path').resolve(__dirname, file))
+    )
+  );
+
+/**
+ * Checks whether a certificate is signed by the given public key.
+ * @param certificate - The {@link X509Certificate} to check.
+ * @param publicKey - The public key of the issuer.
+ * @returns true if the signature is valid, false otherwise.
+ */
+const isSignedBy = (
+  certificate: X509Certificate,
+  publicKey: crypto.KeyObject
+) => {
+  try {
+    return certificate.verify(publicKey);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Normalizes a hex serial number to lowercase without leading zeros.
+ * @param serialNumber - The hex serial number.
+ * @returns the normalized serial number.
+ */
+export const normalizeSerialNumber = (serialNumber: string) =>
+  serialNumber.toLowerCase().replace(/^0+(?=.)/, '');
 
 const base64ToPem = (b64cert: string) => {
   return (
