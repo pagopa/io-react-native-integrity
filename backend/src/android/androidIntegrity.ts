@@ -407,6 +407,8 @@ const validateIssuance = (
   if (!datesValid) throw new Error('Certificates expired');
 
   // Check that each certificate, except for the last, is issued by the subsequent one.
+  // X509Certificate.checkIssued is not used as it applies the OpenSSL web PKI checks, which reject valid
+  // Android attestation chains: e.g. the certificate of an app attest key has a non standard key usage.
   if (x509Chain.length >= 2) {
     for (let i = 0; i < x509Chain.length - 1; i++) {
       const subject = x509Chain[i];
@@ -415,8 +417,8 @@ const validateIssuance = (
       if (
         !subject ||
         !issuer ||
-        subject.checkIssued(issuer) === false ||
-        subject.verify(issuer.publicKey) === false
+        subject.issuer !== issuer.subject ||
+        !isSignedBy(subject, issuer.publicKey)
       ) {
         throw new Error('Certificate chain is invalid');
       }

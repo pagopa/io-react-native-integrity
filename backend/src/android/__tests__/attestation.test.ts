@@ -11,11 +11,13 @@ import {
   createAttestation,
   createTestRoot,
   grapheneOsParams,
+  readDerChainFixture,
   readPemChainFixture,
   stockParams,
   testOptions,
   type TestRoot,
 } from './helpers';
+import { GRAPHENEOS_ALLOWLIST_SNAPSHOT } from '../grapheneosAllowlist';
 
 describe('verifyAttestation', () => {
   let root: TestRoot;
@@ -280,6 +282,105 @@ describe('verifyAttestation', () => {
       await assert.rejects(
         verifyAttestation(tampered, testOptions(root)),
         /Unexpected key attestation extension|Certificate chain is invalid/
+      );
+    });
+  });
+
+  describe('real GrapheneOS chain (Auditor app on a Pixel 9)', () => {
+    const CERTIFICATES = [0, 1, 2, 3, 4].map(
+      (i) => `grapheneos-pixel9-auditor/0_cert_${i}.der`
+    );
+    const ROOT = 'grapheneos-pixel9-auditor/1_google_root_3.der';
+    const options = (overrides: Record<string, unknown> = {}) => ({
+      challenge: Buffer.from(
+        '7387551f024289bff8c37c8f3f5fe676b2949fcec23d391dc00ef40a02f64ea2',
+        'hex'
+      ),
+      packageNames: ['app.attestation.auditor'],
+      signatureDigests: [
+        '990E04F0864B19F14F84E0E432F7A393F297AB105A22C1E1B10B442A4A62C42C',
+      ],
+      trustedSelfSignedBootKeys: new Set(
+        GRAPHENEOS_ALLOWLIST_SNAPSHOT.verifiedBootKeys
+      ),
+      rootPublicKeys: getGoogleRootPublicKeys(),
+      getCrl: async () => ({ entries: {} }),
+      now: new Date('2025-11-10T00:00:00Z'),
+      ...overrides,
+    });
+
+    it('accepts the chain with the Google root and pins the attest key', async () => {
+      const result = await verifyAttestation(
+        readDerChainFixture([...CERTIFICATES, ROOT]),
+        options()
+      );
+      assert.equal(result.os, 'grapheneos');
+      assert.equal(
+        result.record.rootOfTrust?.verifiedBootKey,
+        '9e6a8f3e0d761a780179f93acd5721ba1ab7c8c537c7761073c0a754b0e932de'
+      );
+      assert.equal(
+        result.record.attestationSecurityLevel,
+        SecurityLevel.strongBox
+      );
+      assert.ok(result.attestKeyPublicKey);
+    });
+
+    it('accepts the chain without the Google root, as stored by the Auditor app', async () => {
+      const result = await verifyAttestation(
+        readDerChainFixture(CERTIFICATES),
+        options()
+      );
+      assert.equal(result.os, 'grapheneos');
+    });
+
+    it('accepts the chain pinned to its own attest key', async () => {
+      const chain = readDerChainFixture([...CERTIFICATES, ROOT]);
+      const { attestKeyPublicKey } = await verifyAttestation(chain, options());
+      const result = await verifyAttestation(
+        chain,
+        options({ pinnedAttestKey: attestKeyPublicKey })
+      );
+      assert.equal(result.os, 'grapheneos');
+    });
+
+    const realChainRejections: [string, Record<string, unknown>, RegExp][] = [
+      [
+        'a verified boot key not in the allowlist',
+        { trustedSelfSignedBootKeys: new Set<string>() },
+        /Verified boot key is not allowed/,
+      ],
+      [
+        'another app signing certificate',
+        { signatureDigests: ['00'.repeat(32)] },
+        /Invalid app signing certificate/,
+      ],
+      ['another challenge', { challenge: 'other' }, /Challenge mismatch/],
+      [
+        'expired intermediate certificates',
+        { now: new Date('2026-10-24T00:00:00Z') },
+        /Certificates expired/,
+      ],
+    ];
+
+    for (const [name, overrides, error] of realChainRejections) {
+      it(`rejects ${name}`, async () => {
+        await assert.rejects(
+          verifyAttestation(
+            readDerChainFixture([...CERTIFICATES, ROOT]),
+            options(overrides)
+          ),
+          error
+        );
+      });
+    }
+
+    it('rejects the chain pinned to another attest key', async () => {
+      const chain = readDerChainFixture([...CERTIFICATES, ROOT]);
+      const { publicKey } = await verifyAttestation(chain, options());
+      await assert.rejects(
+        verifyAttestation(chain, options({ pinnedAttestKey: publicKey })),
+        /not been signed by the registered attest key/
       );
     });
   });

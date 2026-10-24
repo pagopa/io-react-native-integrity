@@ -347,5 +347,15 @@ export const readPemChainFixture = (name: string) => {
   );
 };
 
+/**
+ * Reads DER certificate fixtures and encodes them like the native module does.
+ * @param names - The names of the fixtures, from the leaf to the root.
+ * @returns the encoded chain.
+ */
+export const readDerChainFixture = (names: string[]) =>
+  encodeChain(
+    names.map((name) => fs.readFileSync(path.join(FIXTURES_DIR, name)))
+  );
+
 export const readFixture = (name: string) =>
   fs.readFileSync(path.join(FIXTURES_DIR, name), 'utf-8');
