@@ -506,6 +506,8 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * When [useAttestKey] is true and the device supports app attest keys (API 31+), the key pair is attested
    * by a dedicated attest key generated along with it, see [generateAttestationKeyWithAttestKey].
    * In this case the chain starts with the certificate of the key pair followed by the chain of the attest key.
+   * If the attest key generation fails, the key pair is generated without attest key: the backend can't pin
+   * the device, thus it requires Play Integrity for the integrity assertions.
    * @param challenge the challenge to be included which has a max size of 128 bytes.
    * @param keyAlias key alias for the generated key pair.
    * @param useAttestKey whether or not to attest the key pair with an attest key when supported.
@@ -524,15 +526,23 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
           ModuleException.KEY_ALREADY_EXISTS.reject(promise)
           return@Thread
         }
-        if (useAttestKey && hasAttestKey()) {
-          generateAttestationKeyWithAttestKey(keyAlias, challenge.toByteArray())
-          val keyPair = getKeyPair(keyAlias) ?: throw Exception("Unable to get the generated key pair")
-          promise.resolve(
+        val attestation = if (useAttestKey && hasAttestKey()) {
+          try {
+            generateAttestationKeyWithAttestKey(keyAlias, challenge.toByteArray())
+            val keyPair = getKeyPair(keyAlias) ?: throw Exception("Unable to get the generated key pair")
             encodeHardwareBackedAttestation(keyPair, keyAlias, attestKeyAliasFor(keyAlias))
-          )
+          } catch (e: Exception) {
+            // Some devices declare the app attest key feature without a working implementation: the key is
+            // generated without attest key, then the backend can't pin the device and requires Play Integrity
+            Log.w(name, "Attest Key Generation Failed, generating the key without attest key", e)
+            deleteKeyQuietly(keyAlias)
+            deleteKeyQuietly(attestKeyAliasFor(keyAlias))
+            generateEncodedAttestation(keyAlias, challenge.toByteArray())
+          }
         } else {
-          promise.resolve(generateEncodedAttestation(keyAlias, challenge.toByteArray()))
+          generateEncodedAttestation(keyAlias, challenge.toByteArray())
         }
+        promise.resolve(attestation)
       } catch (e: ModuleError) {
         e.type.reject(promise)
       } catch (e: Exception) {
