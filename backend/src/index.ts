@@ -138,7 +138,7 @@ app.listen(port, () => {
     console.warn('[server] ANDROID_BUNDLE_IDENTIFIER is not set in .env');
   if (!process.env.ANDROID_SIGNATURE_DIGESTS)
     console.warn(
-      '[server] ANDROID_SIGNATURE_DIGESTS is not set in .env, devices running GrapheneOS will be rejected'
+      '[server] ANDROID_SIGNATURE_DIGESTS is not set in .env, devices running GrapheneOS and the hardware key attestation fallback will be rejected'
     );
   getGrapheneOsAllowlist().startAutoRefresh();
   if (!BUNDLE_IDENTIFIER)

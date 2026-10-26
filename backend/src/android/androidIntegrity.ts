@@ -300,9 +300,7 @@ export type VerifiedAssertion =
  * Both the Play Integrity token and the fresh key attestation are expected to be sent by the app:
  * 1. the client data must be signed by the hardware key registered with {@link verifyAttestation};
  * 2. if the Play Integrity token is valid the assertion is accepted;
- * 3. otherwise, as fallback, the fresh key attestation must satisfy the same policy of the registration,
- *    with the SHA-256 hex digest of the client data as challenge, and must come from the same device state
- *    (verified boot state and verified boot key) of the registration.
+ * 3. otherwise, as fallback, the fresh key attestation is verified with {@link verifyFreshKeyAttestation}.
  * @param device - The {@link RegisteredDevice}.
  * @param request - The {@link AssertionRequest}.
  * @param options - The {@link AssertionVerificationOptions}.
@@ -341,19 +339,12 @@ export const verifyAndroidAssertion = async (
 
   if (request.attestationAssertion) {
     try {
-      const { os, record } = await verifyAttestation(
+      return await verifyFreshKeyAttestation(
+        device,
         request.attestationAssertion,
-        {
-          ...options,
-          challenge: requestHash,
-          // Fresh attestations must be signed by the attest key pinned at registration, if any
-          pinnedAttestKey: device.attestKeyPublicKey,
-          // A device registered without attest key can't be pinned, it is accepted only for the stock OS
-          requireAttestKeyForSelfSigned: true,
-        }
+        requestHash,
+        options
       );
-      assertSameDeviceState(device.record, record);
-      return { method: 'key_attestation', os };
     } catch (e) {
       failures.push(`Key attestation: ${errorMessage(e)}`);
     }
@@ -362,6 +353,47 @@ export const verifyAndroidAssertion = async (
   }
 
   throw new Error(`Integrity assertion failed. ${failures.join('. ')}`);
+};
+
+/**
+ * Verifies the fresh key attestation sent along with an assertion, which replaces Play Integrity:
+ * - the device must have been registered with an attest key: the verified boot state and key identify
+ *   the OS and not the individual device, so without attest key Play Integrity remains mandatory;
+ * - the app signing certificate digests must be configured, as they replace the Play Integrity app
+ *   recognition verdict for any verified boot state;
+ * - the attestation must satisfy the same policy of the registration, with the SHA-256 hex digest of the
+ *   client data as challenge, and must be signed by the attest key pinned at registration;
+ * - it must come from the same device state (verified boot state and verified boot key) of the registration.
+ * @param device - The {@link RegisteredDevice}.
+ * @param attestationAssertion - The fresh key attestation.
+ * @param requestHash - The SHA-256 hex digest of the client data.
+ * @param options - The {@link AssertionVerificationOptions}.
+ * @returns the {@link VerifiedAssertion}.
+ * @throws {Error} - If the fresh key attestation can't be accepted.
+ */
+const verifyFreshKeyAttestation = async (
+  device: RegisteredDevice,
+  attestationAssertion: string,
+  requestHash: string,
+  options: AssertionVerificationOptions
+): Promise<VerifiedAssertion> => {
+  if (!device.attestKeyPublicKey) {
+    throw new AttestationPolicyError(
+      'No attest key registered with the device, Play Integrity is required'
+    );
+  }
+  if (options.signatureDigests.length === 0) {
+    throw new AttestationPolicyError(
+      'App signing certificate digests are required to accept a hardware key attestation'
+    );
+  }
+  const { os, record } = await verifyAttestation(attestationAssertion, {
+    ...options,
+    challenge: requestHash,
+    pinnedAttestKey: device.attestKeyPublicKey,
+  });
+  assertSameDeviceState(device.record, record);
+  return { method: 'key_attestation', os };
 };
 
 /**

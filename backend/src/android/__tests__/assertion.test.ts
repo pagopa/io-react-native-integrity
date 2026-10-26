@@ -180,16 +180,23 @@ describe('verifyAndroidAssertion', () => {
   });
 
   it('rejects a fresh key attestation from a different device state', async () => {
-    // Without attest key, e.g. a device running the stock OS registered without it
-    const { device, signature, attestationAssertion } = await setup(
-      stockParams(),
-      { verifiedBootKey: '34'.repeat(32) },
-      null,
-      null
-    );
+    // The attest key binds the fresh attestation to the registered root of trust, so the
+    // registered device state is altered to check this further defense
+    const { device, signature, attestationAssertion } =
+      await setup(stockParams());
+    const registered: RegisteredDevice = {
+      ...device,
+      record: {
+        ...device.record,
+        rootOfTrust: device.record.rootOfTrust && {
+          ...device.record.rootOfTrust,
+          verifiedBootKey: '34'.repeat(32),
+        },
+      },
+    };
     await assert.rejects(
       verifyAndroidAssertion(
-        device,
+        registered,
         { clientData: CLIENT_DATA, signature, attestationAssertion },
         options()
       ),
@@ -292,7 +299,19 @@ describe('verifyAndroidAssertion', () => {
       );
     });
 
-    it('accepts an unpinned fresh key attestation for the stock OS registered without attest key', async () => {
+    it('accepts a fresh key attestation of the stock OS signed by the registered attest key', async () => {
+      const { device, signature, attestationAssertion } =
+        await setup(stockParams());
+      assert.ok(device.attestKeyPublicKey);
+      const result = await verifyAndroidAssertion(
+        device,
+        { clientData: CLIENT_DATA, signature, attestationAssertion },
+        options()
+      );
+      assert.deepEqual(result, { method: 'key_attestation', os: 'stock' });
+    });
+
+    it('requires Play Integrity for the stock OS registered without attest key', async () => {
       const { device, signature, attestationAssertion } = await setup(
         stockParams(),
         {},
@@ -300,12 +319,27 @@ describe('verifyAndroidAssertion', () => {
         null
       );
       assert.equal(device.attestKeyPublicKey, undefined);
-      const result = await verifyAndroidAssertion(
-        device,
-        { clientData: CLIENT_DATA, signature, attestationAssertion },
-        options()
+      await assert.rejects(
+        verifyAndroidAssertion(
+          device,
+          { clientData: CLIENT_DATA, signature, attestationAssertion },
+          options()
+        ),
+        /No attest key registered with the device, Play Integrity is required/
       );
-      assert.deepEqual(result, { method: 'key_attestation', os: 'stock' });
+    });
+
+    it('requires the app signing certificate digests to accept a fresh key attestation', async () => {
+      const { device, signature, attestationAssertion } =
+        await setup(stockParams());
+      await assert.rejects(
+        verifyAndroidAssertion(
+          device,
+          { clientData: CLIENT_DATA, signature, attestationAssertion },
+          { ...options(), signatureDigests: [] }
+        ),
+        /App signing certificate digests are required/
+      );
     });
   });
 });

@@ -25,9 +25,9 @@ export type AttestationPolicy = {
   packageNames: string[];
   /**
    * The allowed SHA-256 digests of the app signing certificates (hex, case insensitive).
-   * When empty the check is skipped for devices running the stock OS, while devices running
-   * an allowed self-signed OS are always rejected because the Play Integrity app recognition
-   * verdict is not available for them.
+   * When empty the check is skipped at the registration of devices running the stock OS, while
+   * devices running an allowed self-signed OS and the fresh key attestations sent with the assertions
+   * are always rejected, because they replace the Play Integrity app recognition verdict.
    */
   signatureDigests: string[];
   /**
