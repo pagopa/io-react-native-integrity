@@ -203,12 +203,15 @@ export default function AndroidApp() {
       const assertionIntegrityToken = isServiceAvailable
         ? await requestIntegrityToken(clientDataHash).catch(() => undefined)
         : undefined;
-      const attestationAssertion = capabilities?.isHardwareAttestationSupported
-        ? await getAttestationAssertion(
-            clientDataHash,
-            attestation.hardwareKeyTag
-          )
-        : undefined;
+      // The backend accepts the fresh key attestation only if pinned to the attest key of the hardware key
+      const attestationAssertion =
+        capabilities?.isHardwareAttestationSupported &&
+        capabilities.hasAttestKey
+          ? await getAttestationAssertion(
+              clientDataHash,
+              attestation.hardwareKeyTag
+            )
+          : undefined;
       const response = await postToBackend('/android/verifyAssertion', {
         hardwareKeyTag: attestation.hardwareKeyTag,
         clientData,
