@@ -39,6 +39,15 @@ Pod::Spec.new do |s|
    end
   end
 
-  # Other dependencies
-  s.dependency "SwiftCBOR" 
+
+  if respond_to?(:spm_dependency, true)
+    spm_dependency(s,
+      url: "https://github.com/niscy-eudiw/SwiftCBOR.git",
+      requirement: { kind: "upToNextMajorVersion", minimumVersion: "0.6.2" },
+      products: ["SwiftCBOR"]
+    )
+  else
+    # React Native < 0.75 doesn't provide spm_dependency, fall back to the upstream CocoaPods release.
+    s.dependency "SwiftCBOR"
+  end
 end
