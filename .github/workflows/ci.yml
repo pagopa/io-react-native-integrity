@@ -112,7 +112,7 @@ jobs:
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
       - name: Select Xcode 26
-        run: sudo xcode-select -s /Applications/Xcode_26.app
+        run: sudo xcode-select -s '/Applications/Xcode_26.0.app/Contents/Developer'
 
       - name: Setup
         uses: ./.github/actions/setup
