@@ -39,6 +39,4 @@ Pod::Spec.new do |s|
    end
   end
 
-  # Other dependencies
-  s.dependency "SwiftCBOR" 
 end

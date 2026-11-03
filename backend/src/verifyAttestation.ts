@@ -56,7 +56,7 @@ const verifyAttestation = (params: VerifyAttestationParams) => {
 
   try {
     decodedAttestations = cbor.decodeAllSync(attestation);
-  } catch (e) {
+  } catch {
     throw new Error('invalid attestation');
   }
 
@@ -87,7 +87,7 @@ const verifyAttestation = (params: VerifyAttestationParams) => {
   let certificates;
   try {
     certificates = attStmt.x5c.map((data: any) => new X509Certificate(data));
-  } catch (e) {
+  } catch {
     throw new Error('invalid certificate');
   }
 

@@ -16,10 +16,6 @@ RCT_EXTERN_METHOD(generateHardwareSignatureWithAssertion:(NSString)clientData wi
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(decodeAssertion:(NSString)assertion
-                  withResolver:(RCTPromiseResolveBlock)resolve
-                  withRejecter:(RCTPromiseRejectBlock)reject)
-
 + (BOOL)requiresMainQueueSetup
 {
   return NO;

@@ -46,15 +46,6 @@ export type IntegrityError = {
 };
 
 /**
- * Type of the decoded attestation.
- * Both signature and authenticatorData are base64 encoded.
- */
-export type DecodedAttestation = {
-  signature: string;
-  authenticatorData: string;
-};
-
-/**
  * Error when the platform is not supported.
  */
 const IntegrityErrorUnsupportedError: IntegrityError = {
@@ -160,21 +151,6 @@ export function generateHardwareSignatureWithAssertion(
       ),
     default: () => Promise.reject(IntegrityErrorUnsupportedError),
   })();
-}
-
-/**
- * This function decodes a CBOR encoded iOS assertion.
- *
- * If it is not possible to decode the assertion, the promise is rejected providing an
- * instance of {@link IntegrityError}.
- *
- * @param assertion - the CBOR assertion to be decoded
- * @returns - a promise that resolves to a {@link DecodedAttestation} which contains base64 encoded signature and authenticatorData.
- */
-export function decodeAssertion(
-  assertion: string
-): Promise<DecodedAttestation> {
-  return IoReactNativeIntegrity.decodeAssertion(assertion);
 }
 
 /**
