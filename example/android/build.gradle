@@ -1,11 +1,11 @@
 buildscript {
     ext {
-        buildToolsVersion = "34.0.0"
-        minSdkVersion = 23
-        compileSdkVersion = 34
-        targetSdkVersion = 34
-        ndkVersion = "25.1.8937393"
-        kotlinVersion = "1.8.0"
+        buildToolsVersion = "37.0.0"
+        minSdkVersion = 26
+        compileSdkVersion = 37
+        targetSdkVersion = 36
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.2.0"
     }
     repositories {
         google()
@@ -19,3 +19,12 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// io-react-native-iso18013 relies on BuildConfig, which is disabled by default in recent AGP
+subprojects { subproject ->
+    if (subproject.name == "pagopa_io-react-native-iso18013") {
+        subproject.pluginManager.withPlugin("com.android.library") {
+            subproject.android.buildFeatures.buildConfig = true
+        }
+    }
+}
