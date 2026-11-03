@@ -140,20 +140,6 @@ try {
 }
 ```
 
-### `decodeAttestation`
-
-Decodes the CBOR encoded attestation returned by the `getAttestation` method. Returns an object containing `signature` and `authenticatorData` as base64 encoded strings.
-
-```ts
-try {
-  const decoded = await decodeAttestation(attestation);
-  console.log(decoded);
-} catch (e) {
-  const error = e as IntegrityError;
-  console.log(JSON.stringify(error));
-}
-```
-
 ## Types
 
 |      TypeName      | Description                                                                                                                       |
