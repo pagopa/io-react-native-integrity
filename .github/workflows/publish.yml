@@ -21,7 +21,7 @@ jobs:
       - name: Install latest npm
         run: npm install -g npm@11.5.1
       - name: Install dependencies and build with builder bob
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
       - name: Publish package on NPM 📦
         run: |
           VERSION=$(node -p "require('./package.json').version")
