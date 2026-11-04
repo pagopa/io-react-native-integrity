@@ -2238,6 +2238,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@noble/hashes@npm:^2.4.0":
+  version: 2.4.0
+  resolution: "@noble/hashes@npm:2.4.0"
+  checksum: 0eaf273e341c53ebf7de3e6dcc27755c2124da04152549a61580a525929844e05a7799aeeb9a6a46943cde59ff297ebe6d61968669b162577db188c62b948efe
+  languageName: node
+  linkType: hard
+
 "@nodable/entities@npm:^3.1.0":
   version: 3.1.0
   resolution: "@nodable/entities@npm:3.1.0"
@@ -2439,10 +2446,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@pagopa/io-react-native-crypto@npm:^1.2.5":
+  version: 1.2.5
+  resolution: "@pagopa/io-react-native-crypto@npm:1.2.5"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 33255ee4614fc7a77491bc1b60af4b9b33cd59ae8f35f1e04878dee20fc1676335c5240a22f6de1510549d7f600c7614e56d5587ac95a92a17ffdd2e1911b731
+  languageName: node
+  linkType: hard
+
 "@pagopa/io-react-native-integrity-backend@workspace:backend":
   version: 0.0.0-use.local
   resolution: "@pagopa/io-react-native-integrity-backend@workspace:backend"
   dependencies:
+    "@peculiar/asn1-android": ^2.10.0
+    "@peculiar/asn1-schema": ^2.10.0
+    "@peculiar/x509": ~2.1.0
     "@types/dotenv": ^8.2.0
     "@types/express": ^4.17.21
     "@types/node": ^20.11.25
@@ -2455,6 +2475,7 @@ __metadata:
     googleapis: ^134.0.0
     nodemon: ^3.1.0
     pkijs: ^3.0.15
+    reflect-metadata: ^0.2.2
     rimraf: ^5.0.5
     ts-node: ^10.9.2
     typescript: ^5.4.2
@@ -2470,6 +2491,8 @@ __metadata:
     "@babel/plugin-transform-export-namespace-from": ^7.25.0
     "@babel/preset-env": ^7.25.3
     "@babel/runtime": ^7.25.0
+    "@noble/hashes": ^2.4.0
+    "@pagopa/io-react-native-crypto": ^1.2.5
     "@pagopa/io-react-native-iso18013": ^0.9.0
     "@react-native-community/cli": 20.2.0
     "@react-native-community/cli-platform-android": 20.2.0
@@ -2528,6 +2551,197 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 801e0b6d1bb2b4a91d4d1c37eb80bac1fa487dcbf6034f5c0844d34e3dff997e4b2d198fc91a0533aa33eff05445ddc663694c037c5816f82797ba197c2ec518
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-android@npm:^2.10.0":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-android@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 91b0e6df2ce93b3554a352f4249841ed7c71d4c947a4e755ca4cbaf595cdb61a36f1a60159973dcd925eb06b2b040e368593e08fe8542e5c36043d9df7eec7b0
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-asym-key@npm:^2.11.1":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-asym-key@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-pkcs8": ^2.11.1
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 22971ea6e355fae9238d1b2c36f53e18654024466cb5a7f5ca4432a5f7ad7646ea85dc6da834176b71042e6a2a9d8da40df4c4c32f903261d56cc29eb8e516a6
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-cms@npm:^2.11.1, @peculiar/asn1-cms@npm:^2.9.4":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-cms@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    "@peculiar/asn1-x509-attr": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 6e8a62cd8d934f9f138a7bee28a8457cf4aa859c1cd89b0ff8888f3117b85541372e6a1310d05e9980edcc90f3d77ab8f58c48d121bc7698edc58c398892ad23
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-csr@npm:^2.9.4":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-csr@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: e7cf48c4f2c87c392d30025ec0b8edacea5a74b554ee9b417e78dd603045ebb8c9139905f6244882cce5e145c69ec3319febba5379a15a9946825ff94e07765e
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-ecc@npm:^2.9.4":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-ecc@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 2863dc748167085d5d51715d1b3e93429008e5af324d166c25bc4980618cb11823b77990ea9b640b88c21c5d36fad4de27274de553701d5dfffff20461c7ed2c
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-pfx@npm:^2.11.1":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-pfx@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-cms": ^2.11.1
+    "@peculiar/asn1-pkcs8": ^2.11.1
+    "@peculiar/asn1-rsa": ^2.11.1
+    "@peculiar/asn1-schema": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 5f36938a5d28ed9ee504a129f2d4e33095592faccd1bdad6eb8213fd8ef19561ca09db66e77f436d876fcdddea4eb65a403f5e244fa13d52bf24ef92f3c9b015
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-pkcs8@npm:^2.11.1":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-pkcs8@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 329b8a9716d38baca010931983a152cd8bc87d3bd23c92091f03247166b58d2c61fb1e6c7acb4d6ae2dcbf8d012e88206e7ed246b85c2636fc4e378bc5917d40
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-pkcs9@npm:^2.9.4":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-pkcs9@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-cms": ^2.11.1
+    "@peculiar/asn1-pfx": ^2.11.1
+    "@peculiar/asn1-pkcs8": ^2.11.1
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    "@peculiar/asn1-x509-attr": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 77ae6d72999a34d111077740678e92945ede86720c8453c4fdd6ea05033156bfcee10458da246abee19caa3f74dcf3870ce1cbb5cdbeb7727e36cb915a163365
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-rsa@npm:^2.11.1, @peculiar/asn1-rsa@npm:^2.9.4":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-rsa@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: fe908e19d7e9373e37c6218fe7256e6286c8ffec0657502c60d8035cc38320adc3a354546b0b6a42681d7236a6ec3f06a9106da2e9027e630ec3bd3a77bc1b30
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-schema@npm:^2.10.0, @peculiar/asn1-schema@npm:^2.11.1, @peculiar/asn1-schema@npm:^2.9.4":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-schema@npm:2.11.1"
+  dependencies:
+    "@peculiar/utils": ^2.0.2
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 3fe81fd2794c5341a9e60a7ab37254875082716c92d2162d513963c679fb0de1a366e1720df650128cb4ae674aa556e8b9b94a732d1815fcabcc141f77ddf024
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-x509-attr@npm:^2.11.1":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-x509-attr@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: 62fabdbf7d7db9ddbbcd054e5c0804be3cb10c58ba68b6bcfb7c5232871ac49359511c30970cc73a8fc5339d09161343fd52c7423caf2dd1eadf4e10411f9e6a
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-x509-post-quantum@npm:^2.9.4":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-x509-post-quantum@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-asym-key": ^2.11.1
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/asn1-x509": ^2.11.1
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: ec4dd4f4ae7e4dcfe761289c05c4a03be2c8ab8d4eb911aaad16ffa5088e8e33763d6a14e0ce90706fd3c03bffcbcd6e053cb0a6f589d472bf602805704f86d9
+  languageName: node
+  linkType: hard
+
+"@peculiar/asn1-x509@npm:^2.11.1, @peculiar/asn1-x509@npm:^2.9.4":
+  version: 2.11.1
+  resolution: "@peculiar/asn1-x509@npm:2.11.1"
+  dependencies:
+    "@peculiar/asn1-schema": ^2.11.1
+    "@peculiar/utils": ^2.0.2
+    asn1js: ^3.0.10
+    tslib: ^2.8.1
+  checksum: c72d7d0d62bdf4f9209365ffb55090861e2abe1958694809fbc6138d8f9f683e0731bbebe0189d8d0c2db5bdd5549da461bb815d2de1d493ead4704e71307546
+  languageName: node
+  linkType: hard
+
+"@peculiar/utils@npm:^2.0.2":
+  version: 2.0.3
+  resolution: "@peculiar/utils@npm:2.0.3"
+  dependencies:
+    tslib: ^2.8.1
+  checksum: 438d89318c8accaf2ad9365efe11f4d7e0318f0dd0fdabb67768bbb14641c9cf14e84d34e57c58601a24a78f56802ef356f911151c8dbd8a80ae5e3045100800
+  languageName: node
+  linkType: hard
+
+"@peculiar/x509@npm:~2.1.0":
+  version: 2.1.0
+  resolution: "@peculiar/x509@npm:2.1.0"
+  dependencies:
+    "@peculiar/asn1-cms": ^2.9.4
+    "@peculiar/asn1-csr": ^2.9.4
+    "@peculiar/asn1-ecc": ^2.9.4
+    "@peculiar/asn1-pkcs9": ^2.9.4
+    "@peculiar/asn1-rsa": ^2.9.4
+    "@peculiar/asn1-schema": ^2.9.4
+    "@peculiar/asn1-x509": ^2.9.4
+    "@peculiar/asn1-x509-post-quantum": ^2.9.4
+    pvtsutils: ^1.3.6
+    tslib: ^2.8.1
+    tsyringe: ^4.10.0
+  checksum: f73b4ca8c9ab3fd125f07577dd498219a90668c698780c3090361fb3816c8351dea2b3a21846f87a19b019bdc7ff897568cca64daf95519967328bc517054f45
   languageName: node
   linkType: hard
 
@@ -3993,6 +4207,17 @@ __metadata:
   version: 2.0.6
   resolution: "asap@npm:2.0.6"
   checksum: b296c92c4b969e973260e47523207cd5769abd27c245a68c26dc7a0fe8053c55bb04360237cb51cab1df52be939da77150ace99ad331fb7fb13b3423ed73ff3d
+  languageName: node
+  linkType: hard
+
+"asn1js@npm:^3.0.10":
+  version: 3.1.0
+  resolution: "asn1js@npm:3.1.0"
+  dependencies:
+    pvtsutils: ^1.3.6
+    pvutils: ^1.2.0
+    tslib: ^2.8.1
+  checksum: 5fee071baca7bf980d3cbbd3fc8481fac56027f39eb5918a6879670f55cdee1cdee092c33920616b73e7f763a453a11e7c9e15c397d1139176f80013662834a9
   languageName: node
   linkType: hard
 
@@ -11863,10 +12088,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pvtsutils@npm:^1.3.6":
+  version: 1.3.6
+  resolution: "pvtsutils@npm:1.3.6"
+  dependencies:
+    tslib: ^2.8.1
+  checksum: 97b023b46d7b95bff004f8340efc465c1d995f35d7e97a2ef2e28d5e160f5ca47b48f42463b6be92b4341452a6b8c555feb2b1eb59ee90b97bd5d6fc86ffb186
+  languageName: node
+  linkType: hard
+
 "pvutils@npm:^1.1.3":
   version: 1.1.3
   resolution: "pvutils@npm:1.1.3"
   checksum: 2ee26a9e5176c348977d6ec00d8ee80bff62f51743b1c5fe8abeeb4c5d29d9959cdfe0ce146707a9e6801bce88190fed3002d720b072dc87d031c692820b44c9
+  languageName: node
+  linkType: hard
+
+"pvutils@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "pvutils@npm:1.2.0"
+  checksum: 83c17ca6cba0c05bc523377afc8b0d604a250168000a4d2a7e0c922cceb37e7afc7d07f3610635a9ff790a1af2c8f18c5625df46ade45e3b1e0f83e8aa075a03
   languageName: node
   linkType: hard
 
@@ -12230,6 +12471,13 @@ __metadata:
     indent-string: ^5.0.0
     strip-indent: ^4.0.0
   checksum: 6944e7b1d8f3fd28c2515f5c605b9f7f0ea0f4edddf41890bbbdd4d9ee35abb7540c3b278f03ff827bd278bb6ff4a5bd8692ca406b748c5c1c3ce7355e9fbf8f
+  languageName: node
+  linkType: hard
+
+"reflect-metadata@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "reflect-metadata@npm:0.2.2"
+  checksum: a66c7b583e4efdd8f3c3124fbff33da2d0c86d8280617516308b32b2159af7a3698c961db3246387f56f6316b1d33a608f39bb2b49d813316dfc58f6d3bf3210
   languageName: node
   linkType: hard
 
@@ -13856,10 +14104,33 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tslib@npm:^1.9.3":
+  version: 1.14.1
+  resolution: "tslib@npm:1.14.1"
+  checksum: dbe628ef87f66691d5d2959b3e41b9ca0045c3ee3c7c7b906cc1e328b39f199bb1ad9e671c39025bd56122ac57dfbf7385a94843b1cc07c60a4db74795829acd
+  languageName: node
+  linkType: hard
+
 "tslib@npm:^2.0.1, tslib@npm:^2.1.0, tslib@npm:^2.4.0, tslib@npm:^2.6.1, tslib@npm:^2.6.2":
   version: 2.6.2
   resolution: "tslib@npm:2.6.2"
   checksum: 329ea56123005922f39642318e3d1f0f8265d1e7fcb92c633e0809521da75eeaca28d2cf96d7248229deb40e5c19adf408259f4b9640afd20d13aecc1430f3ad
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2.8.1":
+  version: 2.9.1
+  resolution: "tslib@npm:2.9.1"
+  checksum: 40f590cef617a6ad220ac521a0dd8b8c48faf1494468c195c792dc212b293260b7606ffd505aa52328a07954304e5c2631eb8f884034db2286a98efd1aa1686f
+  languageName: node
+  linkType: hard
+
+"tsyringe@npm:^4.10.0":
+  version: 4.10.0
+  resolution: "tsyringe@npm:4.10.0"
+  dependencies:
+    tslib: ^1.9.3
+  checksum: 61810b1bca8bd58911fe54fbb5a660a3d9349ce1b62b5bc33fea82bbd0dc6475b57aa1f4fd95007cf7dd2c9d05502525b65bd900941fc4b3de08f9c56751d5e9
   languageName: node
   linkType: hard
 

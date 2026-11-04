@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import verifyAttestation from './verifyAttestation';
 import bodyParser from 'body-parser';
 import verifyAssertion from './verifyAssertion';
-import androidRouter from './android/androidRouter';
+import androidRouter, { getGrapheneOsAllowlist } from './android/androidRouter';
 
 dotenv.config();
 const app = express();
@@ -136,6 +136,11 @@ app.listen(port, () => {
   }
   if (!ANDROID_BUNDLE_IDENTIFIER)
     console.warn('[server] ANDROID_BUNDLE_IDENTIFIER is not set in .env');
+  if (!process.env.ANDROID_SIGNATURE_DIGESTS)
+    console.warn(
+      '[server] ANDROID_SIGNATURE_DIGESTS is not set in .env, devices running GrapheneOS and the hardware key attestation fallback will be rejected'
+    );
+  getGrapheneOsAllowlist().startAutoRefresh();
   if (!BUNDLE_IDENTIFIER)
     console.warn('[server] BUNDLE_IDENTIFIER is not set in .env');
   if (!TEAM_IDENTIFIER)

@@ -5,23 +5,28 @@
   "main": "index.js",
   "scripts": {
     "start": "npx nodemon",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --require ts-node/register/transpile-only --test src/android/__tests__/*.test.ts",
+    "typecheck": "tsc --noEmit",
     "build": "rimraf ./build && tsc"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@peculiar/x509": "~2.1.0",
     "@types/dotenv": "^8.2.0",
     "@types/express": "^4.17.21",
     "@types/node": "^20.11.25",
     "@types/uuid": "^9.0.8",
     "nodemon": "^3.1.0",
+    "reflect-metadata": "^0.2.2",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.2"
   },
   "dependencies": {
+    "@peculiar/asn1-android": "^2.10.0",
+    "@peculiar/asn1-schema": "^2.10.0",
     "asn1js": "^3.0.5",
     "body-parser": "^1.20.2",
     "cbor": "^9.0.2",
