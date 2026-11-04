@@ -107,12 +107,15 @@ jobs:
           yarn turbo run build:android --cache-dir="${{ env.TURBO_CACHE_DIR }}"
 
   build-ios:
-    runs-on: macos-14
+    runs-on: macos-26
     env:
       TURBO_CACHE_DIR: .turbo/ios
     steps:
       - name: Checkout
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+
+      - name: Select Xcode 26
+        run: sudo xcode-select -s '/Applications/Xcode_26.6.app/Contents/Developer'
 
       - name: Setup
         uses: ./.github/actions/setup

@@ -5,9 +5,9 @@ import {
   getAttestation,
   isAttestationServiceAvailable,
   generateHardwareSignatureWithAssertion,
-  decodeAssertion,
   type IntegrityError,
 } from '@pagopa/io-react-native-integrity';
+import { decodeAssertion } from './decodeAssertion';
 import { BACKEND_ADDRESS } from '@env';
 import ButtonWithLoader from './components/ButtonWithLoader';
 
@@ -112,7 +112,7 @@ export default function App() {
   const verifyAssertion = async () => {
     try {
       if (assertion) {
-        // decode CBOR assertion on native side (iOS only)
+        // decode CBOR assertion using io-react-native-iso18013
         const decodedAssertion = await decodeAssertion(assertion);
         // verify attestation on the server with POST
         // and body of challenge, attestation and keyId
