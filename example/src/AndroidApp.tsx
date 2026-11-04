@@ -10,7 +10,8 @@ import {
   type HardwareAttestationCapabilities,
 } from '@pagopa/io-react-native-integrity';
 import { sign } from '@pagopa/io-react-native-crypto';
-import { sha256 } from 'react-native-sha256';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import ButtonWithLoader from './components/ButtonWithLoader';
 import { BACKEND_ADDRESS, GOOGLE_CLOUD_PROJECT_NUMBER } from '@env';
 import uuid from 'react-native-uuid';
@@ -198,7 +199,7 @@ export default function AndroidApp() {
       }
       setIsVerifyAssertionLoading(true);
       const clientData = JSON.stringify({ challenge: await getNonce() });
-      const clientDataHash = await sha256(clientData);
+      const clientDataHash = bytesToHex(sha256(utf8ToBytes(clientData)));
       const signature = await sign(clientData, attestation.hardwareKeyTag);
       const assertionIntegrityToken = isServiceAvailable
         ? await requestIntegrityToken(clientDataHash).catch(() => undefined)
