@@ -9,6 +9,8 @@ import {
   requestIntegrityToken,
   type HardwareAttestationCapabilities,
 } from '@pagopa/io-react-native-integrity';
+// The hardware key is stored in the Android Keystore under its tag, so any signer can use it: the
+// IO app uses its private @io-app/expo-crypto module, which keeps the API of this public package
 import { sign } from '@pagopa/io-react-native-crypto';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';

@@ -45,7 +45,9 @@ A reference implementation is provided in the [backend](backend) directory, see 
 ```ts
 const capabilities = await getHardwareAttestationCapabilities();
 const clientDataHash = sha256Hex(clientData);
-const signature = await sign(clientData, hardwareKeyTag); // e.g. @pagopa/io-react-native-crypto
+// Any Android Keystore signer which looks up the key by its tag, e.g. @pagopa/io-react-native-crypto
+// (@io-app/expo-crypto in the IO app)
+const signature = await sign(clientData, hardwareKeyTag);
 const integrityToken = capabilities.isPlayServicesAvailable
   ? await requestIntegrityToken(clientDataHash).catch(() => undefined)
   : undefined;
