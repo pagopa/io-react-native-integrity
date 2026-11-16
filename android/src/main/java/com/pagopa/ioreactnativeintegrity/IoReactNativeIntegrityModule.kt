@@ -132,19 +132,15 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
 
   /**
    * Gets the SDK version the device has been launched with, which corresponds to the
-   * `ro.product.first_api_level` system property.
-   * From [Build.VERSION_CODES.S] it is exposed by [Build.VERSION.DEVICE_INITIAL_SDK_INT], while on older
-   * versions the system property is read on a best effort basis as it is not part of the public SDK.
-   * When the property is not set the device has been launched with the running OS version, thus
-   * [Build.VERSION.SDK_INT] is returned, which is also used as fallback when the property can't be read.
+   * `ro.product.first_api_level` system property. The property is read on a best effort basis, as done by
+   * the GrapheneOS Auditor app, since it is not exposed by the public SDK (Build.VERSION.DEVICE_INITIAL_SDK_INT
+   * is a system API). When the property is not set the device has been launched with the running OS
+   * version, thus [Build.VERSION.SDK_INT] is returned, which is also used as fallback when the property
+   * can't be read.
    * @return the SDK version the device has been launched with.
    */
   private fun getFirstApiLevel(): Int {
-    val firstApiLevel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      Build.VERSION.DEVICE_INITIAL_SDK_INT
-    } else {
-      readSystemProperty(FIRST_API_LEVEL_PROPERTY)?.toIntOrNull() ?: 0
-    }
+    val firstApiLevel = readSystemProperty(FIRST_API_LEVEL_PROPERTY)?.toIntOrNull() ?: 0
     return if (firstApiLevel > 0) firstApiLevel else Build.VERSION.SDK_INT
   }
 
