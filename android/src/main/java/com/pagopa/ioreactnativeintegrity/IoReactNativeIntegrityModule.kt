@@ -194,6 +194,7 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * If StrongBox is available the key pair is generated in StrongBox first. The function retries using TEE when:
    * - the StrongBox generation fails;
    * - the StrongBox key attestation certificate chain is not valid, see [isCertificateChainValid].
+   *   A chain with less than two certificates is considered not valid as well.
    * Some StrongBox implementations return a chain whose leaf certificate is not signed by the
    * remotely provisioned attestation key of the chain, which the backend rightly rejects. As the
    * keystore keeps assigning the same attestation key to the app until it expires, retrying with
@@ -206,28 +207,31 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && reactApplicationContext.packageManager.hasSystemFeature(
         PackageManager.FEATURE_STRONGBOX_KEYSTORE
       )
-    if (hasStrongBox) {
-      try {
-        // Generate the attestation key using StrongBox if available
-        val keyPair = generateAttestationKey(keyAlias, challenge, true)
-        if (isCertificateChainValid(keyStore?.getCertificateChain(keyAlias))) {
-          return keyPair
-        }
-        Log.w(name, "StrongBox key attestation certificate chain is invalid, retrying with TEE")
+
+    // Without StrongBox, generate the key using TEE
+    if (!hasStrongBox) {
+      return try {
+        generateAttestationKey(keyAlias, challenge, false)
       } catch (e: Exception) {
-        Log.w(name, "StrongBox Key Generation Failed, retrying with TEE", e)
+        throw Exception("KeyPair Failed Without Fallback: ${e.message}", e)
       }
-      // If the StrongBox attestation can't be used, we retry the generation using TEE instead of StrongBox.
-      // If the generation fails again we throw the exception
-      deleteKeyQuietly(keyAlias)
-      return generateAttestationKey(keyAlias, challenge, false)
     }
-    return try {
-      generateAttestationKey(keyAlias, challenge, false)
+
+    // With StrongBox, attempt to use it first, falling back to TEE if the generation fails or the
+    // certificate chain is invalid. This is required due to some broken StrongBox implementations that
+    // return invalid attestation chains, where the leaf certificate is not signed by the remotely
+    // provisioned (RKP) attestation key of the chain.
+    try {
+      val keyPair = generateAttestationKey(keyAlias, challenge, true)
+      if (isCertificateChainValid(keyStore?.getCertificateChain(keyAlias))) return keyPair
+      Log.w(name, "StrongBox key attestation certificate chain is invalid, retrying with TEE")
     } catch (e: Exception) {
-      // If StrongBox has not been used we throw back the error to the caller
-      throw Exception("KeyPair Failed Without Fallback", e)
+      Log.w(name, "StrongBox key generation failed, retrying with TEE", e)
     }
+
+    // If StrongBox can't be used, retry with TEE
+    deleteKeyQuietly(keyAlias)
+    return generateAttestationKey(keyAlias, challenge, false)
   }
 
   /**
