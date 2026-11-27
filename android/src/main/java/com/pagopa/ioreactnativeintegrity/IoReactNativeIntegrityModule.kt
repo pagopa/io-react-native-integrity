@@ -267,28 +267,79 @@ class IoReactNativeIntegrityModule(reactContext: ReactApplicationContext) :
    * @param challenge the public key certificate for this key pair will contain an extension that
    * describes the details of the key's configuration and authorizations, including the
    * [challenge] value.
-   * If StrongBox is enabled and the generation fails, the function will retry using TEE.
-   * @param attestKeyAlias the optional alias of the attest key used to sign the attestation, see [generateAttestationKey].
+   * If StrongBox is available the key pair is generated in StrongBox first. The function retries using TEE when:
+   * - the StrongBox generation fails;
+   * - the StrongBox key attestation certificate chain is not valid, see [isCertificateChainValid].
+   *   A chain with less than two certificates is considered not valid as well.
+   * Some StrongBox implementations return a chain whose leaf certificate is not signed by the
+   * remotely provisioned attestation key of the chain, which the backend rightly rejects. As the
+   * keystore keeps assigning the same attestation key to the app until it expires, retrying with
+   * StrongBox would return the same invalid chain, while TEE uses its own attestation keys.
    * @returns the generated key pair.
    */
   @RequiresApi(Build.VERSION_CODES.N)
-  private fun generateAttestationKeyWithFallback(
-    keyAlias: String, challenge: ByteArray, attestKeyAlias: String? = null
-  ): KeyPair {
-    val hasStrongBox = hasStrongBox()
-    return try {
-      // Generate the attestation key using StrongBox if available
-      generateAttestationKey(keyAlias, challenge, hasStrongBox, attestKeyAlias)
-    } catch (e: Exception) {
-      // If the generation fails, we can retry the generation using TEE instead of StrongBox
-      // If the generation fails again we throw the exception
-      if (hasStrongBox) {
-        Log.w(name, "StrongBox Key Generation Failed, retrying with TEE")
-        generateAttestationKey(keyAlias, challenge, false, attestKeyAlias)
-      } else {
-        // If StrongBox has not been used we throw back the error to the caller
-        throw Exception("KeyPair Failed Without Fallback", e)
+  private fun generateAttestationKeyWithFallback(keyAlias: String, challenge: ByteArray): KeyPair {
+    val hasStrongBox =
+      Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && reactApplicationContext.packageManager.hasSystemFeature(
+        PackageManager.FEATURE_STRONGBOX_KEYSTORE
+      )
+
+    // Without StrongBox, generate the key using TEE
+    if (!hasStrongBox) {
+      return try {
+        generateAttestationKey(keyAlias, challenge, false)
+      } catch (e: Exception) {
+        throw Exception("KeyPair Failed Without Fallback: ${e.message}", e)
       }
+    }
+
+    // With StrongBox, attempt to use it first, falling back to TEE if the generation fails or the
+    // certificate chain is invalid. This is required due to some broken StrongBox implementations that
+    // return invalid attestation chains, where the leaf certificate is not signed by the remotely
+    // provisioned (RKP) attestation key of the chain.
+    try {
+      val keyPair = generateAttestationKey(keyAlias, challenge, true)
+      if (isCertificateChainValid(keyStore?.getCertificateChain(keyAlias))) return keyPair
+      Log.w(name, "StrongBox key attestation certificate chain is invalid, retrying with TEE")
+    } catch (e: Exception) {
+      Log.w(name, "StrongBox key generation failed, retrying with TEE", e)
+    }
+
+    // If StrongBox can't be used, retry with TEE
+    deleteKeyQuietly(keyAlias)
+    return generateAttestationKey(keyAlias, challenge, false)
+  }
+
+  /**
+   * Checks the internal consistency of a key attestation certificate chain: each certificate must be
+   * signed by the public key of the next one. The trust in the root is evaluated by the backend.
+   * @param chain the certificate chain, from the attested key to the root.
+   * @return true if the chain has at least two certificates, each signed by the next one, false otherwise.
+   */
+  private fun isCertificateChainValid(chain: Array<Certificate>?): Boolean {
+    if (chain == null || chain.size < 2) {
+      return false
+    }
+    return try {
+      for (i in 0 until chain.lastIndex) {
+        chain[i].verify(chain[i + 1].publicKey)
+      }
+      true
+    } catch (e: Exception) {
+      Log.w(name, "Invalid key attestation certificate chain", e)
+      false
+    }
+  }
+
+  /**
+   * Deletes a key pair from the [keyStore] ignoring any error.
+   * @param keyAlias the alias of the key pair to delete.
+   */
+  private fun deleteKeyQuietly(keyAlias: String) {
+    try {
+      keyStore?.deleteEntry(keyAlias)
+    } catch (e: Exception) {
+      Log.w(name, "Unable to delete the key pair $keyAlias", e)
     }
   }
 

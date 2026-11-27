@@ -36,7 +36,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - pagopa-io-react-native-integrity (0.3.2):
+  - pagopa-io-react-native-integrity (1.1.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1929,7 +1929,7 @@ SPEC CHECKSUMS:
   glog: b4427c3119645da795ff09985ba9da909c940c96
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
   IoReactNativeIso18013: 6ed636bfb83f3368bf7011d9da32df0605f48d45
-  pagopa-io-react-native-integrity: 20f4edc041bf25c2ff12be0b9850880fba852fd8
+  pagopa-io-react-native-integrity: 8819aa741ee2db65e5b8b968c464167e4363e1bf
   RCT-Folly: d173e541eeb78cad5c81011c1bbf62d5b86b9778
   RCTDeprecation: 1dce662386078170e119b89c1600db1b6e3d42f6
   RCTRequired: b5a9168b680baa2cda4f6b4764d10b6e58368b25

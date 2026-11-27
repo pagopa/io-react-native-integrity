@@ -191,6 +191,8 @@ try {
 
 Generates an attestation for the given challenge and hardware key. The hardware key generated at the previous step can be used here.
 
+On Android the key is generated in StrongBox when available, and in the TEE otherwise. The key is generated in the TEE also when the StrongBox generation fails or the StrongBox certificate chain is not valid, i.e. a certificate is not signed by the next one: some StrongBox implementations return a leaf certificate which is not signed by the remotely provisioned attestation key of the chain, and the keystore keeps assigning the same attestation key to the app until it expires.
+
 ```ts
 try {
   const attestation = await getAttestation(challenge, key);
