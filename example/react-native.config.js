@@ -6,5 +6,11 @@ module.exports = {
     [pak.name]: {
       root: path.join(__dirname, '..'),
     },
+    // Only used by the Android example to sign with the attested hardware key
+    '@pagopa/io-react-native-crypto': {
+      platforms: {
+        ios: null,
+      },
+    },
   },
 };
